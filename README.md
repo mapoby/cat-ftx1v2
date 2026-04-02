@@ -7,3 +7,7 @@ The solution is designed to make it easier to use the transceiver by eliminating
 The technology used allows the application to run on various operating systems including Windows, macOS, and Linux
 
 The app works by establishing a connection and identifying the tuner. Once the FTX-1 tuner is detected, auto-information mode is activated, which sends all parameter changes to the app; these changes are then displayed graphically in the web browser.
+
+![FTX-1 Console Screenshot](docs/ui.screenshot.png)
+
+**Author:** SP9AX
