@@ -112,60 +112,6 @@
     
       <!-- ── VFO Section ── -->
       <section class="vfo-section">
-        <!-- MAIN VFO -->
-        <div class="vfo-card main-card"
-          :class="{
-            'vfo-card--tx-vfo':   state.txVfo === 0,
-            'vfo-card--inactive': state.rxMode === 'single' && state.txVfo === 1,
-          }"
-        >
-          <div class="vfo-header">
-            <span class="vfo-label">MAIN</span>
-            <span v-if="state.txVfo === 0" class="tx-vfo-badge">TX VFO</span>
-            <select
-              class="band-sel"
-              :value="mainBandCode ?? ''"
-              :disabled="bandBusy || state.txState || state.mox"
-              @change="selectBand('0', ($event.target as HTMLSelectElement).value)"
-            >
-              <option value="" disabled>band…</option>
-              <option v-for="b in BANDS" :key="b.code" :value="b.code">{{ b.label }}</option>
-            </select>
-            <select
-              class="mode-sel"
-              :style="modeBadgeStyle(state.mainMode)"
-              :value="state.mainMode ?? ''"
-              :disabled="modeBusy || state.txState || state.mox"
-              @change="selectMode('0', ($event.target as HTMLSelectElement).value)"
-            >
-              <option v-if="!state.mainMode" value="" disabled>--</option>
-              <option v-for="m in MODES" :key="m.code" :value="m.label">{{ m.label }}</option>
-            </select>
-          </div>
-          <div class="freq-row">
-            <div class="freq-display" :class="{ 'freq-tx': state.txState || state.mox }">
-              {{ formatFreq(state.mainFreq) }}
-            </div>
-            <span class="freq-unit">MHz</span>
-            <div v-if="isFmMode(state.mainMode) && state.mainSqlType !== null && state.mainSqlType !== 0" class="sql-row">
-              <span class="sql-badge" :style="{ background: sqlTypeColor(state.mainSqlType) + '28', borderColor: sqlTypeColor(state.mainSqlType), color: sqlTypeColor(state.mainSqlType) }">
-                {{ sqlTypeLabel(state.mainSqlType) }}
-                <span v-if="toneDisplay(state.mainSqlType, state.mainCtcssTone, state.mainDcsCode)" class="sql-tone">{{ toneDisplay(state.mainSqlType, state.mainCtcssTone, state.mainDcsCode) }}
-                </span>
-              </span>
-            </div>
-          </div>
-          <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
-          <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" />
-          <LevelBar v-if="isRfGainMode(state.mainMode)" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
-          <LevelBar v-else :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
-          <br/>
-          <section class="status-section">
-            <StatusBadge label="AGC" :value="state.agcMain ?? '--'" />
-            <StatusBadge label="DNR" :value="state.dnrMain != null ? String(state.dnrMain) : '--'" />
-          </section>
-        </div>
-
         <!-- SUB VFO -->
         <div class="vfo-card sub-card"
           :class="{
@@ -175,14 +121,14 @@
         >
           <div class="vfo-header">
             <span class="vfo-label">SUB</span>
-            <span v-if="state.txVfo === 1" class="tx-vfo-badge">TX VFO</span>
+            <span v-if="state.txVfo === 1" class="tx-vfo-badge">TX/RX VFO</span>
             <select
               class="band-sel"
               :value="subBandCode ?? ''"
               :disabled="bandBusy || state.txState || state.mox"
               @change="selectBand('1', ($event.target as HTMLSelectElement).value)"
             >
-              <option value="" disabled>pasmo…</option>
+              <option value="" disabled>band…</option>
               <option v-for="b in BANDS" :key="b.code" :value="b.code">{{ b.label }}</option>
             </select>
             <select
@@ -211,15 +157,72 @@
             </div>
           </div>
           <SMeter :value="state.subSmeter" label="SUB S-meter" />
-          <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#3b82f6,#60a5fa)" />
+          <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('1', $event)" />
           <LevelBar v-if="isRfGainMode(state.subMode)" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
-          <LevelBar v-else :value="state.sqSub" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
+          <LevelBar v-else :value="state.sqSub" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
           <br/>
           <section class="status-section">
             <StatusBadge label="AGC" :value="state.agcSub ?? '--'" />
             <StatusBadge label="DNR" :value="state.dnrSub != null ? String(state.dnrSub) : '--'" />
+            <StatusBadge label="Tone SQL" :value="state.subSqlType != null ? sqlTypeLabel(state.subSqlType) : '--'" :active="state.subSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('1', state.subSqlType)" />
           </section>
         </div>
+
+        <!-- MAIN VFO -->
+        <div class="vfo-card main-card"
+             :class="{
+            'vfo-card--tx-vfo':   state.txVfo === 0,
+            'vfo-card--inactive': state.rxMode === 'single' && state.txVfo === 1,
+          }"
+        >
+          <div class="vfo-header">
+            <span class="vfo-label">MAIN</span>
+            <span v-if="state.txVfo === 0" class="tx-vfo-badge">TX/RX VFO</span>
+            <select
+                class="band-sel"
+                :value="mainBandCode ?? ''"
+                :disabled="bandBusy || state.txState || state.mox"
+                @change="selectBand('0', ($event.target as HTMLSelectElement).value)"
+            >
+              <option value="" disabled>band…</option>
+              <option v-for="b in BANDS" :key="b.code" :value="b.code">{{ b.label }}</option>
+            </select>
+            <select
+                class="mode-sel"
+                :style="modeBadgeStyle(state.mainMode)"
+                :value="state.mainMode ?? ''"
+                :disabled="modeBusy || state.txState || state.mox"
+                @change="selectMode('0', ($event.target as HTMLSelectElement).value)"
+            >
+              <option v-if="!state.mainMode" value="" disabled>--</option>
+              <option v-for="m in MODES" :key="m.code" :value="m.label">{{ m.label }}</option>
+            </select>
+          </div>
+          <div class="freq-row">
+            <div class="freq-display" :class="{ 'freq-tx': state.txState || state.mox }">
+              {{ formatFreq(state.mainFreq) }}
+            </div>
+            <span class="freq-unit">MHz</span>
+            <div v-if="isFmMode(state.mainMode) && state.mainSqlType !== null && state.mainSqlType !== 0" class="sql-row">
+              <span class="sql-badge" :style="{ background: sqlTypeColor(state.mainSqlType) + '28', borderColor: sqlTypeColor(state.mainSqlType), color: sqlTypeColor(state.mainSqlType) }">
+                {{ sqlTypeLabel(state.mainSqlType) }}
+                <span v-if="toneDisplay(state.mainSqlType, state.mainCtcssTone, state.mainDcsCode)" class="sql-tone">{{ toneDisplay(state.mainSqlType, state.mainCtcssTone, state.mainDcsCode) }}
+                </span>
+              </span>
+            </div>
+          </div>
+          <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
+          <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('0', $event)" />
+          <LevelBar v-if="isRfGainMode(state.mainMode)" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
+          <LevelBar v-else :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
+          <br/>
+          <section class="status-section">
+            <StatusBadge label="AGC" :value="state.agcMain ?? '--'" />
+            <StatusBadge label="DNR" :value="state.dnrMain != null ? String(state.dnrMain) : '--'" />
+            <StatusBadge label="Tone SQL" :value="state.mainSqlType != null ? sqlTypeLabel(state.mainSqlType) : '--'" :active="state.mainSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('0', state.mainSqlType)" />
+          </section>
+        </div>
+
       </section>
 
       <!-- ── Status Grid ── -->
@@ -480,6 +483,7 @@ const mainBandCode = computed(() => freqToBandCode(state.value.mainFreq))
 const subBandCode  = computed(() => freqToBandCode(state.value.subFreq))
 
 const bandBusy = ref(false)
+const sqlTypeBusy = ref(false)
 
 async function selectBand(vfo: '0' | '1', code: string) {
   if (bandBusy.value || !code) return
@@ -811,6 +815,43 @@ async function toggleLock() {
   }
 }
 
+const SQL_TYPE_MAX = 5
+
+async function cycleSqlType(vfo: '0' | '1', current: number | null) {
+  if (sqlTypeBusy.value || current === null) return
+  sqlTypeBusy.value = true
+  try {
+    const next = current >= SQL_TYPE_MAX ? 0 : current + 1
+    // CT P1 P2 ; — P1=VFO (0/1), P2=type (0-5)
+    await $fetch('/api/command', {
+      method: 'POST',
+      body: { command: `CT${vfo}${next}` },
+    })
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    sqlTypeBusy.value = false
+  }
+}
+
+async function setSquelch(vfo: '0' | '1', value: number) {
+  const val = Math.max(0, Math.min(255, value))
+  // SQ P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
+  await $fetch('/api/command', {
+    method: 'POST',
+    body: { command: `SQ${vfo}${String(val).padStart(3, '0')}` },
+  }).catch((e: any) => { lastError.value = e.message })
+}
+
+async function setAfGain(vfo: '0' | '1', value: number) {
+  const val = Math.max(0, Math.min(255, value))
+  // AG P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
+  await $fetch('/api/command', {
+    method: 'POST',
+    body: { command: `AG${vfo}${String(val).padStart(3, '0')}` },
+  }).catch((e: any) => { lastError.value = e.message })
+}
+
 async function toggleMox() {
   if (moxBusy.value) return
   moxBusy.value = true
@@ -892,7 +933,7 @@ onUnmounted(() => {
   --bg: #0d1117;
   --surface: #161b22;
   --surface2: #21262d;
-  --border: #30363d;
+  --border: #505152;
   --text: #e6edf3;
   --text-muted: #8b949e;
   --accent: #58a6ff;
@@ -1094,13 +1135,14 @@ body {
   padding: 16px 20px;
 }
 
-.main-card { border-left: 3px solid var(--accent); }
-.sub-card { border-left: 3px solid #8b5cf6; }
+.main-card { border-left: 3px solid #777777; }
+.sub-card { border-left: 3px solid #777777; }
 
 /* TX VFO — left accent turns red, subtle glow */
 .vfo-card--tx-vfo {
-  border-left-color: var(--red) !important;
+  border-left-color: #ffffff !important;
   box-shadow: inset 0 0 0 1px rgba(248, 81, 73, .12);
+  border: 1px solid var(--border);
 }
 
 /* Single-receive inactive VFO — greyed out, non-interactive */
@@ -1207,6 +1249,20 @@ body {
   font-weight: 600;
 }
 
+.sql-cycle-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+.sql-cycle-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .freq-display {
   font-family: var(--font-mono);
   font-size: 42px;
@@ -1226,6 +1282,7 @@ body {
   align-items: baseline;
   gap: 6px;
   margin-bottom: 12px;
+  margin-top: 22px;
 }
 
 .freq-unit {

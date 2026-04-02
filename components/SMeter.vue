@@ -58,8 +58,8 @@ const fillPercent = computed(() => {
 
 const fillColor = computed(() => {
   const v = props.value ?? 0
-  if (v < 180) return 'linear-gradient(90deg, #22c55e, #86efac)'
-  if (v < 210) return 'linear-gradient(90deg, #22c55e, #facc15)'
+  if (v < 75) return 'linear-gradient(90deg, #22c55e, #86efac)'
+  if (v < 140) return 'linear-gradient(90deg, #22c55e, #facc15)'
   return 'linear-gradient(90deg, #facc15, #f87171)'
 })
 
