@@ -65,47 +65,68 @@
           <span class="func-knob-value">{{ state.funcKnob ?? '--' }}</span>
           <div class="func-knob-btns">
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'D-LEVEL' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF01')"
-              title="Ustaw FUNC KNOB → D-LEVEL"
+              title="SET FUNC KNOB → D-LEVEL"
             >D-LEVEL</button>
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'RF POWER' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF0D')"
-              title="Ustaw FUNC KNOB → RF POWER"
+              title="SET FUNC KNOB → RF POWER"
             >RF POWER</button>
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'MIC GAIN' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF07')"
-              title="Ustaw FUNC KNOB → MIC GAIN"
+              title="SET FUNC KNOB → MIC GAIN"
             >MIC GAIN</button>
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'AMC LEVEL' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF09')"
-              title="Ustaw FUNC KNOB → AMC LEVEL"
+              title="SET FUNC KNOB → AMC LEVEL"
             >AMC LEVEL</button>
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'PROC LEVEL' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF08')"
-              title="Ustaw FUNC KNOB → PROC LEVEL"
+              title="SET FUNC KNOB → PROC LEVEL"
             >PROC LEVEL</button>
             <button
-              class="btn btn-ghost btn-sm"
+              class="btn btn-ghost btn-sm func-knob-label"
               :class="{ 'btn-active': state.funcKnob === 'VOX GAIN' }"
               :disabled="!state.connected || funcKnobBusy"
               @click="setFuncKnob('SF0A')"
-              title="Ustaw FUNC KNOB → VOX GAIN"
+              title="SET FUNC KNOB → VOX GAIN"
             >VOX GAIN</button>
+            <button
+                class="btn btn-ghost btn-sm func-knob-label"
+                :class="{ 'btn-active': state.funcKnob === 'MONI LEVEL' }"
+                :disabled="!state.connected || funcKnobBusy"
+                @click="setFuncKnob('SF0E')"
+                title="SET FUNC KNOB → MONI LEVEL"
+            >MONI LEVEL</button>
+            <button
+                class="btn btn-ghost btn-sm func-knob-label"
+                :class="{ 'btn-active': state.funcKnob === 'CONTRAST' }"
+                :disabled="!state.connected || funcKnobBusy"
+                @click="setFuncKnob('SF04')"
+                title="SET FUNC KNOB → CONTRAST"
+            >CONTRAST</button>
+            <button
+                class="btn btn-ghost btn-sm func-knob-label"
+                :class="{ 'btn-active': state.funcKnob === 'DIMMER' }"
+                :disabled="!state.connected || funcKnobBusy"
+                @click="setFuncKnob('SF05')"
+                title="SET FUNC KNOB → DIMMER"
+            >DIMMER</button>
           </div>
         </div>
       </div>
@@ -158,7 +179,7 @@
           </div>
           <SMeter :value="state.subSmeter" label="SUB S-meter" />
           <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('1', $event)" />
-          <LevelBar v-if="isRfGainMode(state.subMode)" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
+          <LevelBar v-if="isRfGainMode(state.subMode)" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
           <LevelBar v-else :value="state.sqSub" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
           <br/>
           <section class="status-section">
@@ -213,7 +234,7 @@
           </div>
           <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
           <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('0', $event)" />
-          <LevelBar v-if="isRfGainMode(state.mainMode)" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" />
+          <LevelBar v-if="isRfGainMode(state.mainMode)" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
           <LevelBar v-else :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
           <br/>
           <section class="status-section">
@@ -232,34 +253,112 @@
         <StatusBadge label="LOCK" :value="state.lock != null ? (state.lock ? 'ON' : 'OFF') : '--'" :active="state.lock === true" color-active="#f59e0b" :clickable="state.lock !== null" :busy="lockBusy" @toggle="toggleLock" />
         <StatusBadge label="PWR" :value="state.powerLevel != null ? state.powerLevel + ' W' : '--'" />
         <StatusBadge label="SCAN" :value="state.radioInfo?.scanning ? 'ON' : 'OFF'" :active="state.radioInfo?.scanning" />
-        <!-- StatusBadge label="SQL" :value="state.radioInfo?.squelchOpen ? 'OPEN' : 'CLOSED'" :active="state.radioInfo?.squelchOpen" color-active="#22d3ee" / -->
         <StatusBadge label="TUNER" :value="state.radioInfo?.tuning ? 'TUNING' : 'IDLE'" :active="state.radioInfo?.tuning" />
         <StatusBadge label="ATT" :value="state.rfAttenuator ? 'ON' : 'OFF'" :active="state.rfAttenuator" />
         <StatusBadge label="RECORD" :value="state.radioInfo?.recording ? 'ON' : (state.radioInfo?.playing ? 'PLAY' : 'OFF')" :active="state.radioInfo?.recording || state.radioInfo?.playing" />
         <StatusBadge label="MIC GAIN" :value="state.micGain != null ? String(state.micGain) : '--'" />
         <StatusBadge label="AMC" :value="state.amcLevel != null ? String(state.amcLevel) : '--'" />
-        <StatusBadge label="SPEECH PROC" :value="speechProcLabel" :active="state.speechProc === true" color-active="#f59e0b" :clickable="state.speechProc !== null" :busy="speechProcBusy" @toggle="toggleSpeechProc" />
+        <StatusBadge label="MIC EQ" :value="speechProcLabel" :active="state.speechProc === true" color-active="#10b981" :clickable="state.speechProc !== null" :busy="speechProcBusy" @toggle="toggleSpeechProc" />
         <StatusBadge label="PROC LEVEL" :value="state.speechProcLevel != null ? (state.speechProcLevel === 0 ? 'OFF' : String(state.speechProcLevel)) : '--'" />
         <StatusBadge label="VOX" :value="state.vox != null ? (state.vox ? 'ON' : 'OFF') : '--'" :active="state.vox === true" color-active="#10b981" :clickable="state.vox !== null" :busy="voxBusy" @toggle="toggleVox" />
         <StatusBadge label="VOX GAIN" :value="state.voxGain != null ? String(state.voxGain) : '--'" />
       </section>
 
-      <!-- ── Presets ── -->
-      <section v-if="presets.length > 0" class="presets-section">
-        <div class="presets-header">
-          <span class="section-title">Presets</span>
-          <span class="presets-hint">Edit <code>cat-presets.json</code> to customize</span>
-        </div>
-        <div class="presets-grid">
-          <PresetButton
-            v-for="preset in presets"
-            :key="preset.id"
-            :preset="preset"
-            :connected="state.connected"
-            @executed="onPresetExecuted"
-          />
-        </div>
-      </section>
+      <!-- ── Bottom panels row ── -->
+      <div class="bottom-panels">
+
+        <!-- Scope panel -->
+        <section class="scope-panel">
+          <span class="scope-title">Band Scope</span>
+
+          <!-- LEVEL bar (bipolar: -30…+30, step 0.5) -->
+          <div class="scope-level-row">
+            <span class="scope-level-lbl">LEVEL</span>
+            <div class="scope-level-track" @click="onScopeLevelClick">
+              <div class="scope-level-center" />
+              <div
+                class="scope-level-fill"
+                :style="scopeLevelFillStyle"
+              />
+            </div>
+            <span class="scope-level-val">{{ scopeLevelDisplay }}</span>
+          </div>
+
+          <!-- SPAN + SPEED controls -->
+          <div class="scope-controls">
+            <div class="scope-btn-group">
+              <span class="scope-group-lbl">SPAN</span>
+              <button
+                v-for="s in SCOPE_SPANS" :key="s.value"
+                class="btn btn-xs scope-btn"
+                :class="{ 'scope-btn--active': state.scope?.span === s.value }"
+                @click="setScopeSpan(s.value)"
+              >{{ s.label }}</button>
+            </div>
+
+            <div class="scope-sep" />
+
+            <div class="scope-btn-group">
+              <span class="scope-group-lbl">SPEED</span>
+              <button
+                v-for="s in SCOPE_SPEEDS" :key="s.value"
+                class="btn btn-xs scope-btn"
+                :class="{ 'scope-btn--active': state.scope?.speed === s.value }"
+                @click="setScopeSpeed(s.value)"
+              >{{ s.label }}</button>
+            </div>
+          </div>
+
+          <div class="scope-controls">
+            <div class="scope-btn-group">
+              <span class="scope-group-lbl">MODE</span>
+              <button
+                v-for="m in SCOPE_MODES" :key="m.value"
+                class="btn btn-xs scope-btn"
+                :class="{ 'scope-btn--active': state.scope?.mode === m.value }"
+                @click="setScopeMode(m.value)"
+              >{{ m.label }}</button>
+            </div>
+
+            <div class="scope-sep" />
+
+            <button
+              class="btn btn-xs scope-btn scope-color-btn"
+              @click="cycleScopeColor"
+            >
+              <span>{{ scopeColorLabel }}</span>
+            </button>
+
+            <div class="scope-sep" />
+
+            <button
+              class="btn btn-xs scope-btn scope-color-btn"
+              :class="{ 'scope-btn--active': state.scope?.marker === true }"
+              @click="toggleScopeMarker"
+            >
+              <span>MARKER {{ state.scope?.marker == null ? '--' : state.scope.marker ? 'ON' : 'OFF' }}</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Presets panel -->
+        <section v-if="presets.length > 0" class="presets-section">
+          <div class="presets-header">
+            <span class="section-title">Presets</span>
+            <span class="presets-hint">Edit <code>cat-presets.json</code> to customize</span>
+          </div>
+          <div class="presets-grid">
+            <PresetButton
+              v-for="preset in presets"
+              :key="preset.id"
+              :preset="preset"
+              :connected="state.connected"
+              @executed="onPresetExecuted"
+            />
+          </div>
+        </section>
+
+      </div>
 
       <!-- ── Manual command input ── -->
       <section class="cmd-section">
@@ -282,7 +381,7 @@
       <p>Select a serial port and click <strong>Connect</strong> to start.</p>
       <p class="idle-hint">
         On macOS, FTX-1 appears as <code>/dev/cu.SLAB_USBtoUART</code> or similar.<br>
-        Default baud rate: <strong>38400</strong> (CAT-1)
+        Default baud rate: <strong>38400</strong> for CAT-1 and <strong>4800</strong> for CAT-2.
       </p>
     </div>
 
@@ -360,6 +459,7 @@ interface TransceiverState {
   dnrMain: string | null
   dnrSub: string | null
   rfAttenuator: boolean
+  scope: { mode: number | null, span: number | null, speed: number | null, level: number | null, att: number | null, color: number | null, marker: boolean | null } | null
   lastUpdate: number
   error: string | null
 }
@@ -404,6 +504,7 @@ const defaultState = (): TransceiverState => ({
   dnrMain: null,
   dnrSub: null,
   rfAttenuator: false,
+  scope: null,
   lastUpdate: Date.now(),
   error: null,
 })
@@ -545,6 +646,130 @@ const RF_GAIN_MODES = new Set(['LSB', 'USB', 'CW-U', 'CW-L', 'RTTY-L', 'RTTY-U',
 
 function isRfGainMode(mode: string | null): boolean {
   return mode != null && RF_GAIN_MODES.has(mode)
+}
+
+// ── Band Scope (SS command) ─────────────────────────────
+
+const SCOPE_SPANS = [
+//  { value: 0, label: '-' },
+//  { value: 1, label: '-' },
+  { value: 2, label: '5k' },
+  { value: 3, label: '10k' },
+  { value: 4, label: '20k' },
+  { value: 5, label: '50k' },
+  { value: 6, label: '100k' },
+  { value: 7, label: '200k' },
+  { value: 8, label: '500k' },
+  { value: 9, label: '1M' },
+] as const
+
+const SCOPE_SPEEDS = [
+  { value: 0, label: 'SLOW1' },
+  { value: 1, label: 'SLOW2' },
+  { value: 2, label: 'FAST1' },
+  { value: 3, label: 'FAST2' },
+  { value: 4, label: 'FAST3' },
+  { value: 5, label: 'STOP' },
+] as const
+
+const SCOPE_MODES = [
+  { value: 0, label: '3DSS CTR' },
+  { value: 1, label: '3DSS CUR' },
+  { value: 2, label: '3DSS FIX' },
+  { value: 3, label: 'W/F CTR' },
+  { value: 6, label: 'W/F CUR' },
+  { value: 9, label: 'W/F FIX' },
+] as const
+
+// Level: encoded 0-120 where 60=0.0, step=0.5 dB
+const scopeLevelDisplay = computed(() => {
+  const l = state.value.scope?.level
+  if (l == null) return '--'
+  else return l
+  //const db = (l - 0) // * 0.5
+  //return (db >= 0 ? '+' : '') + db.toFixed(1)
+})
+
+const scopeLevelFillStyle = computed(() => {
+  const l = state.value.scope?.level ?? 60
+  const center = 50 // %
+  const pct = ((l - 0) / 30) * 50 // -50..+50 %
+  if (pct >= 0) return { left: center + '%', width: pct + '%', background: 'linear-gradient(90deg,#f59e0b,#fcd34d)' }
+  return { left: (center + pct) + '%', width: (-pct) + '%', background: 'linear-gradient(270deg,#f59e0b,#fcd34d)' }
+})
+
+function buildScopeLevelCmd(overrides: { level?: number }): string {
+  const s = state.value.scope
+  const level = overrides.level ?? s?.level ?? 15
+  const result = (level * 0.5) - 30;
+  const sign = result >= 0 ? '+' : '-';
+  const abs = Math.abs(result).toFixed(1).padStart(4, '0');
+  return `SS04${sign}${abs}`
+}
+
+function buildScopeSpanCmd(overrides: { span?: number }): string {
+  const s = state.value.scope
+  const span = overrides.span ?? s?.span ?? 0
+  return `SS05${span}0000`
+}
+
+function buildScopeSpeedCmd(overrides: { speed?: number }): string {
+  const s = state.value.scope
+  const speed = overrides.speed ?? s?.speed ?? 0
+  return `SS00${speed}0000`
+}
+
+function onScopeLevelClick(e: MouseEvent) {
+  const track = e.currentTarget as HTMLElement
+  const rect = track.getBoundingClientRect()
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+  const level = Math.round(pct * 120)
+  $fetch('/api/command', { method: 'POST', body: { command: buildScopeLevelCmd({ level }) } })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+function setScopeSpan(span: number) {
+  $fetch('/api/command', { method: 'POST', body: { command: buildScopeSpanCmd({ span }) } })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+function setScopeSpeed(speed: number) {
+  $fetch('/api/command', { method: 'POST', body: { command: buildScopeSpeedCmd({ speed }) } })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+function buildScopeModeCmd(overrides: { mode?: number }): string {
+  const s = state.value.scope
+  const mode = overrides.mode ?? s?.mode ?? 0
+  return `SS06${mode}0000`
+}
+
+function setScopeMode(mode: number) {
+  $fetch('/api/command', { method: 'POST', body: { command: buildScopeModeCmd({ mode }) } })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+// COLOR: values 0–10 (0x0–0xA), labels COLOR 1–COLOR 11
+const SCOPE_COLOR_MAX = 10
+
+const scopeColorLabel = computed(() => {
+  const c = state.value.scope?.color
+  return c != null ? `COLOR ${c + 1}` : '--'
+})
+
+function cycleScopeColor() {
+  const current = state.value.scope?.color ?? 0
+  const next = current >= SCOPE_COLOR_MAX ? 0 : current + 1
+  const hex = next.toString(16).toUpperCase()   // 0–9, A
+  $fetch('/api/command', { method: 'POST', body: { command: `SS03${hex}0000` } })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+function toggleScopeMarker() {
+  //if (state.value.scope?.marker === null) return
+  const next = state.value.scope?.marker ? '0' : '1'   // 0=OFF, 1=ON
+  $fetch('/api/command', { method: 'POST', body: { command: `SS02${next}0000` } })
+    .catch((e: any) => { lastError.value = e.message })
 }
 
 /** Human-readable SQL type label */
@@ -769,8 +994,7 @@ async function toggleSpeechProc() {
   if (speechProcBusy.value || state.value.speechProc === null) return
   speechProcBusy.value = true
   try {
-    // PR P1 P2 ; — P1=0 (Speech Processor), P2: 1=OFF, 2=ON
-    const cmd = state.value.speechProc ? 'PR01' : 'PR02'
+    const cmd = state.value.speechProc ? 'PR10' : 'PR11'
     const data = await $fetch<{ response: string; state: TransceiverState }>('/api/command', {
       method: 'POST',
       body: { command: cmd },
@@ -840,6 +1064,15 @@ async function setSquelch(vfo: '0' | '1', value: number) {
   await $fetch('/api/command', {
     method: 'POST',
     body: { command: `SQ${vfo}${String(val).padStart(3, '0')}` },
+  }).catch((e: any) => { lastError.value = e.message })
+}
+
+async function setRfGain(vfo: '0' | '1', value: number) {
+  const val = Math.max(0, Math.min(255, value))
+  // RG P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
+  await $fetch('/api/command', {
+    method: 'POST',
+    body: { command: `RG${vfo}${String(val).padStart(3, '0')}` },
   }).catch((e: any) => { lastError.value = e.message })
 }
 
@@ -1486,6 +1719,166 @@ body {
   background: var(--surface2);
   border-color: var(--accent) !important;
   color: var(--accent) !important;
+}
+
+/* ── Bottom panels row ── */
+.bottom-panels {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── Scope panel ── */
+.scope-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 340px;
+  flex-shrink: 0;
+}
+
+.scope-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+/* level bar */
+.scope-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-level-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8b949e;
+  white-space: nowrap;
+  width: 38px;
+  flex-shrink: 0;
+}
+
+.scope-level-track {
+  flex: 1;
+  height: 7px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.scope-level-track:hover {
+  border-color: #6e7681;
+}
+
+.scope-level-center {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 1px;
+  height: 13px;
+  background: #6e7681;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.scope-level-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 3px;
+  transition: left .1s ease-out, width .1s ease-out;
+  pointer-events: none;
+}
+
+.scope-level-val {
+  font-size: 9px;
+  font-family: 'SF Mono', monospace;
+  color: #8b949e;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* controls row */
+.scope-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scope-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.scope-group-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8b949e;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.scope-sep {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.btn-xs {
+  font-size: 10px;
+  padding: 3px 7px;
+}
+
+.scope-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  white-space: nowrap;
+}
+
+.scope-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.scope-btn--active {
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface2));
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.scope-color-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.scope-color-btn .scope-group-lbl {
+  margin-right: 0;
 }
 
 /* ── Footer ── */

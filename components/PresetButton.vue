@@ -16,9 +16,9 @@
 
     <span class="btn-body">
       <span class="btn-top">
-        <span class="btn-icon" v-if="preset.icon">{{ preset.icon }}</span>
+        <!-- span class="btn-icon" v-if="preset.icon">{{ preset.icon }}</span -->
         <span class="btn-label">{{ preset.label }}</span>
-        <span class="btn-badge">{{ preset.commands.length }}</span>
+        <!-- span class="btn-badge">{{ preset.commands.length }}</span -->
       </span>
       <span class="btn-desc" v-if="preset.description">{{ preset.description }}</span>
     </span>
@@ -28,7 +28,7 @@
       <span v-if="running" class="status-overlay running">
         <span class="spinner">⟳</span> {{ progress }}
       </span>
-      <span v-else-if="flashState === 'ok'" class="status-overlay ok">✓ Gotowe</span>
+      <span v-else-if="flashState === 'ok'" class="status-overlay ok">✓ Ready</span>
       <span v-else-if="flashState === 'error'" class="status-overlay err">
         ✕ {{ errorMsg }}
       </span>
@@ -131,7 +131,7 @@ async function execute() {
   color: #e6edf3;
   transition: border-color .15s, background .15s, opacity .15s;
   overflow: hidden;
-  min-width: 180px;
+  min-width: 100px;
   max-width: 260px;
   padding: 0;
 }

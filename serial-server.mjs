@@ -79,6 +79,8 @@ class SerialManager extends EventEmitter {
       dnrMain: null,
       dnrSub: null,
       rfAttenuator: false,
+      // SS — Band Scope settings
+      scope: { mode: null, span: null, speed: null, level: null, att: null, color: null, marker: null },
       lastUpdate: Date.now(),
       error: null,
     }
@@ -115,8 +117,6 @@ class SerialManager extends EventEmitter {
         })
 
         sp.on('close', () => {
-          this._stopSmeterPolling()
-          //this._stopParamsPolling()
           this.state.connected = false
           this.state.autoInfo = false
           this.state.error = 'Port closed'
@@ -174,11 +174,10 @@ class SerialManager extends EventEmitter {
   // ── Disconnect ─────────────────────────────────────────
 
   async disconnect() {
-    this._stopSmeterPolling()
 
     // Politely disable Auto Information before closing
     if (this.port?.isOpen) {
-      try { await this.sendCommand('AI0', 500) } catch { /* ignore */ }
+      try { await this.sendCommandNoWait('AI0') } catch { /* ignore */ }
     }
 
     this._drainQueue(new Error('Disconnected'))
@@ -245,34 +244,14 @@ class SerialManager extends EventEmitter {
     // AI mode is already active — send queries fire-and-forget.
     // The transceiver will reply with unsolicited frames that _handleResponse will parse.
     const INIT_CMDS = ['FA', 'FB', 'MD0', 'MD1', 'TX', 'MX', 'ST', 'GT0', 'GT1', 'AG0', 'AG1', 'RG0', 'RG1', 'PC', 'RI0',
-                       'AO', 'MG', 'PR0', 'PL', 'VX', 'VG', 'SF', 'FR', 'FT', 'CT0', 'CT1', 'CN00', 'CN01', 'CN10', 'CN11', 'RL0', 'RL1', 'RA0', 'LK', 'SQ0', 'SQ1']
+                       'AO', 'MG', 'PR0', 'PR1', 'PL', 'VX', 'VG', 'SF', 'FR', 'FT', 'CT0', 'CT1', 'CN00', 'CN01', 'CN10', 'CN11', 'RL0',
+                       'RL1', 'RA0', 'LK', 'SQ0', 'SQ1', 'SS05', 'SS04', 'SS00', 'SS03', 'SS06']
     for (const cmd of INIT_CMDS) {
       if (!this.port?.isOpen) break
       try { await this.sendCommandNoWait(cmd) } catch { /* non-fatal */ }
       await new Promise(r => setTimeout(r, 40))
     }
   }
-
-  // ── S-meter polling (fast — 500 ms) ───────────────────
-  // S-meter readings are never sent autonomously by AI mode.
-  async _pollSmeter() {
-    if (!this.port?.isOpen) return
-    for (const cmd of ['SM0', 'SM1']) {
-      if (!this.port?.isOpen) break
-      try { await this.sendCommand(cmd, 500) } catch { /* non-fatal */ }
-      await new Promise(r => setTimeout(r, 30))
-    }
-  }
-
-  _startSmeterPolling() {
-    if (this.smeterTimer) clearInterval(this.smeterTimer)
-    this.smeterTimer = setInterval(() => this._pollSmeter(), 500)
-  }
-
-  _stopSmeterPolling() {
-    if (this.smeterTimer) { clearInterval(this.smeterTimer); this.smeterTimer = null }
-  }
-
 
   // ── Incoming data dispatcher ───────────────────────────
   // Works for both solicited (queued) and unsolicited (AI) responses.
@@ -284,6 +263,7 @@ class SerialManager extends EventEmitter {
     }
 
     const prefix = response.substring(0, 2).toUpperCase()
+    //console.log(`[serial-received] ${response}`)
 
     // If the head of the queue is expecting this prefix, resolve it.
     // Pass the original queued command so the parser can use it as a
@@ -354,7 +334,7 @@ class SerialManager extends EventEmitter {
       // PR — Speech Processor / Parametric EQ
       // Query PR0; → answer PR0x; where params[0]='0' (speech proc), params[1]: '1'=OFF '2'=ON
       case 'PR':
-        if (params[0] === '0') this.state.speechProc = params[1] === '2'; break
+        if (params[0] === '1') this.state.speechProc = params[1] === '1'; break
       // PL — Speech Processor Level (000=OFF, 001–100)
       case 'PL': this.state.speechProcLevel = parseInt(params, 10); break
       // VX — VOX on/off (0=OFF, 1=ON)
@@ -454,6 +434,23 @@ class SerialManager extends EventEmitter {
       }
       // LK — Dial Lock (0=OFF, 1=ON)
       case 'LK': this.state.lock = params[0] === '1'; break
+      // SS — Band Scope settings; FTX-1 sends one sub-parameter per frame.
+      // params[1] identifies the field; always create a NEW scope object so
+      // computeDelta detects the change via reference inequality.
+      case 'SS': {
+        if (params.length >= 3) {
+          const s = { ...this.state.scope }
+          if      (params[1] === '0') s.speed  = parseInt(params[2], 10)
+          else if (params[1] === '2') s.marker = params[2] === '1'        // 0=OFF, 1=ON
+          else if (params[1] === '3') s.color  = parseInt(params[2], 16)  // hex 0–A
+          else if (params[1] === '4') s.level = parseInt(params.substring(2, 6), 10)
+          else if (params[1] === '5') s.span  = parseInt(params[2], 10)
+          else if (params[1] === '6') s.mode  = parseInt(params[2], 10)
+          else if (params[1] === '7') s.att   = parseInt(params[2], 10)
+          this.state.scope = s   // new object reference — delta will detect it
+        }
+        break
+      }
       // AI — acknowledgement of AI0/AI1 command
       case 'AI': this.state.autoInfo = params[0] === '1'; break
     }
@@ -617,6 +614,22 @@ const server = http.createServer(async (req, res) => {
       if (!body.command) return send(res, 400, { error: 'command is required' })
       const cmd = body.command.replace(/;+$/, '').trim()
       await manager.sendCommandNoWait(cmd)
+      // Some commands do not generate AI unsolicited notifications.
+      // For those, follow up with a read query after a short delay so the
+      // response is parsed as an unsolicited frame, state is updated, and
+      // an SSE delta is broadcast to all connected clients.
+      const prefix = cmd.substring(0, 2).toUpperCase()
+      // SS has no VFO byte — query is just 'SS'.
+      // SQ / AG / RG include a VFO byte at position [2] — query is e.g. 'SQ0', 'AG1'.
+      let followUpQuery = null
+      /*if (prefix === 'SS' && cmd.length > 2) {
+        followUpQuery = 'SS'
+      } else if (['SQ', 'AG', 'RG'].includes(prefix) && cmd.length > 3) {
+        followUpQuery = prefix + cmd[2]   // e.g. 'SQ0', 'AG1', 'RG0'
+      }*/
+      if (followUpQuery) {
+        setTimeout(() => manager.sendCommandNoWait(followUpQuery).catch(() => {}), 150)
+      }
       return send(res, 200, { ok: true, state: manager.getState() })
     }
 
