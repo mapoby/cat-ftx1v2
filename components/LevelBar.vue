@@ -5,6 +5,7 @@
       class="level-track"
       :class="{ 'level-track--clickable': clickable }"
       @click="clickable ? handleClick($event) : undefined"
+      @wheel.prevent="wheelable ? handleWheel($event) : undefined"
     >
       <div
         class="level-fill"
@@ -25,6 +26,7 @@ const props = defineProps<{
   max?: number
   color?: string
   clickable?: boolean
+  wheelable?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,6 +48,12 @@ const fillColor = computed(() =>
 
 const dragging = ref(false)
 const cursorPct = ref(0)
+
+function handleWheel(e: WheelEvent) {
+  if (props.value == null) return
+  const next = Math.max(0, Math.min(maxVal.value, props.value + (e.deltaY < 0 ? 5 : -5)))
+  if (next !== props.value) emit('update', next)
+}
 
 function handleClick(e: MouseEvent) {
   const track = e.currentTarget as HTMLElement
