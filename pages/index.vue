@@ -136,10 +136,16 @@
         <!-- SUB VFO -->
         <div class="vfo-card sub-card"
           :class="{
-            'vfo-card--tx-vfo':   state.txVfo === 1,
-            'vfo-card--inactive': state.rxMode === 'single' && state.txVfo === 0,
+            'vfo-card--tx-vfo':    state.txVfo === 1,
+            'vfo-card--inactive':  state.rxMode === 'single' && state.txVfo === 0 && state.split,
+            'vfo-card--switchable': state.rxMode === 'single' && state.txVfo === 0 && !state.split,
           }"
         >
+          <div
+            v-if="state.rxMode === 'single' && state.txVfo === 0 && !state.split"
+            class="vfo-switch-overlay"
+            @click="switchToVfo('1')"
+          />
           <div class="vfo-header">
             <span class="vfo-label">SUB</span>
             <span v-if="state.txVfo === 1" class="tx-vfo-badge">TX/RX VFO</span>
@@ -177,7 +183,7 @@
             </div>
           </div>
           <SMeter :value="state.subSmeter" label="SUB S-meter" />
-          <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('1', $event)" />
+          <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" />
           <LevelBar v-if="isRfGainMode(state.subMode)" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
           <LevelBar v-else :value="state.sqSub" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
           <br/>
@@ -189,16 +195,23 @@
             <StatusBadge label="Tone SQL" :value="state.subSqlType != null ? sqlTypeLabel(state.subSqlType) : '--'" :active="state.subSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('1', state.subSqlType)" />
             <StatusBadge label="CTCSS" :value="state.subCtcssTone != null ? (CTCSS_TONES[state.subCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '1'" @toggle="openCtcssPopup('1')" />
             <StatusBadge label="DCS" :value="state.subDcsCode != null ? ('D' + String(DCS_CODES[state.subDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '1'" @toggle="openDcsPopup('1')" />
+            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.subFreq !== null" @toggle="saveChannelFromVfo('1')" />
           </section>
         </div>
 
         <!-- MAIN VFO -->
         <div class="vfo-card main-card"
              :class="{
-            'vfo-card--tx-vfo':   state.txVfo === 0,
-            'vfo-card--inactive': state.rxMode === 'single' && state.txVfo === 1,
+            'vfo-card--tx-vfo':    state.txVfo === 0,
+            'vfo-card--inactive':  state.rxMode === 'single' && state.txVfo === 1 && state.split,
+            'vfo-card--switchable': state.rxMode === 'single' && state.txVfo === 1 && !state.split,
           }"
         >
+          <div
+            v-if="state.rxMode === 'single' && state.txVfo === 1 && !state.split"
+            class="vfo-switch-overlay"
+            @click="switchToVfo('0')"
+          />
           <div class="vfo-header">
             <span class="vfo-label">MAIN</span>
             <span v-if="state.txVfo === 0" class="tx-vfo-badge">TX/RX VFO</span>
@@ -235,7 +248,7 @@
             </div>
           </div>
           <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
-          <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" @update="setAfGain('0', $event)" />
+          <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" />
           <LevelBar v-if="isRfGainMode(state.mainMode)" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
           <LevelBar v-else :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
           <br/>
@@ -247,6 +260,7 @@
             <StatusBadge label="Tone SQL" :value="state.mainSqlType != null ? sqlTypeLabel(state.mainSqlType) : '--'" :active="state.mainSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('0', state.mainSqlType)" />
             <StatusBadge label="CTCSS" :value="state.mainCtcssTone != null ? (CTCSS_TONES[state.mainCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '0'" @toggle="openCtcssPopup('0')" />
             <StatusBadge label="DCS" :value="state.mainDcsCode != null ? ('D' + String(DCS_CODES[state.mainDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '0'" @toggle="openDcsPopup('0')" />
+            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.mainFreq !== null" @toggle="saveChannelFromVfo('0')" />
           </section>
         </div>
 
@@ -254,6 +268,7 @@
 
       <!-- ── Status Grid ── -->
       <section class="status-section">
+        <StatusBadge label="RX MODE" :value="state.rxMode?.toUpperCase() ?? '--'" :active="state.rxMode === 'dual'" color-active="#10b981" :clickable="state.rxMode !== null" :busy="rxModeBusy" @toggle="toggleRxMode" />
         <StatusBadge label="SPLIT" :value="state.split ? 'ON' : 'OFF'" :active="state.split" :clickable="true" :busy="splitBusy" @toggle="toggleSplit" />
         <StatusBadge label="MOX" :value="state.mox ? 'ON' : 'OFF'" :active="state.mox" color-active="#ef4444" :clickable="true" :busy="moxBusy" @toggle="toggleMox" />
         <StatusBadge label="LOCK" :value="state.lock != null ? (state.lock ? 'ON' : 'OFF') : '--'" :active="state.lock === true" color-active="#f59e0b" :clickable="state.lock !== null" :busy="lockBusy" @toggle="toggleLock" />
@@ -262,7 +277,6 @@
         </div>
         <StatusBadge label="SCAN" :value="state.radioInfo?.scanning ? 'ON' : 'OFF'" :active="state.radioInfo?.scanning" />
         <StatusBadge label="TUNER" :value="state.radioInfo?.tuning ? 'TUNING' : 'IDLE'" :active="state.radioInfo?.tuning" />
-        <StatusBadge label="ATT" :value="state.rfAttenuator ? 'ON' : 'OFF'" :active="state.rfAttenuator" color-active="#f59e0b" :clickable="attClickable" :busy="attBusy" @toggle="toggleAtt" />
         <StatusBadge label="RECORD" :value="state.radioInfo?.recording ? 'ON' : (state.radioInfo?.playing ? 'PLAY' : 'OFF')" :active="state.radioInfo?.recording || state.radioInfo?.playing" />
         <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.micGain != null }" @wheel.prevent="onMicGainWheel">
           <StatusBadge label="MIC GAIN" :value="state.micGain != null ? String(state.micGain) : '--'" />
@@ -278,9 +292,12 @@
         <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.voxGain != null }" @wheel.prevent="onVoxGainWheel">
           <StatusBadge label="VOX GAIN" :value="state.voxGain != null ? String(state.voxGain) : '--'" />
         </div>
+        <StatusBadge label="ATT" :value="state.rfAttenuator ? 'ON' : 'OFF'" :active="state.rfAttenuator" color-active="#f59e0b" :clickable="attClickable" :busy="attBusy" @toggle="toggleAtt" />
         <StatusBadge label="AMP HF/50MHz" :value="state.preAmpHf != null ? (['IPO','AMP1','AMP2'][state.preAmpHf] ?? '--') : '--'" :active="state.preAmpHf != null && state.preAmpHf > 0" color-active="#10b981" :clickable="state.preAmpHf !== null" :busy="preAmpBusy" @toggle="togglePreAmpHf" />
         <StatusBadge label="AMP VHF" :value="state.preAmpVhf != null ? (state.preAmpVhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpVhf === true" color-active="#10b981" :clickable="state.preAmpVhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpVhf" />
         <StatusBadge label="AMP UHF" :value="state.preAmpUhf != null ? (state.preAmpUhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpUhf === true" color-active="#10b981" :clickable="state.preAmpUhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpUhf" />
+        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="false ? 'ANT2' : 'ANT1'" :active="state.antSelect === 0" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect1" />
+        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="true ? 'ANT2' : 'ANT1'" :active="state.antSelect === 1" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect2" />
       </section>
 
       <!-- ── Bottom panels row ── -->
@@ -360,6 +377,28 @@
           </div>
         </section>
 
+        <!-- Saved channels panel -->
+        <section class="channels-panel">
+          <div class="channels-header">
+            <span class="scope-title">Saved Channels</span>
+            <span class="channels-count" v-if="savedChannels.length > 0">{{ savedChannels.length }}</span>
+          </div>
+          <div class="channels-list" v-if="savedChannels.length > 0">
+            <div
+              v-for="ch in sortedChannels"
+              :key="ch.id"
+              class="ch-badge"
+              :title="chSqlLabel(ch) ?? undefined"
+              @click="applyChannel(ch)"
+            >
+              <span class="ch-freq">{{ chLabel(ch) }}</span>
+              <span v-if="chSqlLabel(ch)" class="ch-sql">{{ chSqlLabel(ch) }}</span>
+              <button class="ch-del" @click.stop="deleteChannel(ch.id)" title="Remove">×</button>
+            </div>
+          </div>
+          <div v-else class="channels-empty">No saved channels</div>
+        </section>
+
         <!-- Presets panel -->
         <section v-if="presets.length > 0" class="presets-section">
           <div class="presets-header">
@@ -406,11 +445,11 @@
 
     <footer class="footer">
       <span>Yaesu FTX-1 · <span v-if="state.firmware.display">Display: {{ state.firmware.display }} · </span>
-        <span v-if="state.firmware.main">Main: {{ state.firmware.main }} · </span>
-        <span v-if="state.firmware.dsp">Dsp: {{ state.firmware.dsp }} · </span>
-        <span v-if="state.firmware.sdr">Sdr: {{ state.firmware.sdr }} · </span>
-        <span v-if="state.firmware.spa1">Opt: {{ state.firmware.spa1 }} · </span>
-        <span v-if="state.firmware.fc80">Fc80: {{ state.firmware.fc80 }} · </span> Last update: {{ lastUpdateTime }}</span>
+        <span v-if="state.firmware?.main">Main: {{ state.firmware.main }} · </span>
+        <span v-if="state.firmware?.dsp">Dsp: {{ state.firmware.dsp }} · </span>
+        <span v-if="state.firmware?.sdr">Sdr: {{ state.firmware.sdr }} · </span>
+        <span v-if="state.firmware?.spa1">Opt: {{ state.firmware.spa1 }} · </span>
+        <span v-if="state.firmware?.fc80">Fc80: {{ state.firmware.fc80 }} · </span> Last update: {{ lastUpdateTime }}</span>
     </footer>
 
     <!-- ── CTCSS tone picker modal (teleported to body) ── -->
@@ -614,6 +653,7 @@ interface TransceiverState {
   scopeSide: boolean | null
   scope: { mode: number | null, span: number | null, speed: number | null, level: number | null, att: number | null, color: number | null, marker: boolean | null } | null
   firmware: { main: string | null, display: string | null, sdr: string | null, dsp: string | null, spa1: string | null, fc80: string | null } | null,
+  antSelect: number | null
   lastUpdate: number
   error: string | null
 }
@@ -664,9 +704,19 @@ const defaultState = (): TransceiverState => ({
   scopeSide: null,
   scope: null,
   firmware: { main: null, display: null, sdr: null, dsp: null, spa1: null, fc80: null },
+  antSelect: null,
   lastUpdate: Date.now(),
   error: null,
 })
+
+interface ChannelConfig {
+  id: string
+  freq: number
+  mode: string | null
+  sqlType: number | null
+  ctcssIdx: number | null
+  dcsIdx: number | null
+}
 
 interface Preset {
   id: string
@@ -696,9 +746,23 @@ const presets = ref<Preset[]>([])
 const funcKnobBusy = ref(false)
 const speechProcBusy = ref(false)
 const voxBusy = ref(false)
-const preAmpBusy = ref(false)
+const preAmpBusy    = ref(false)
+const antSelectBusy = ref(false)
+const rxModeBusy = ref(false)
 const splitBusy = ref(false)
+const savedChannels = ref<ChannelConfig[]>([])
+
+function loadChannels() {
+  try {
+    const raw = localStorage.getItem('cat_channels')
+    savedChannels.value = raw ? JSON.parse(raw) : []
+  } catch { savedChannels.value = [] }
+}
+function persistChannels() {
+  localStorage.setItem('cat_channels', JSON.stringify(savedChannels.value))
+}
 const moxBusy = ref(false)
+const txVfoBusy = ref(false)
 const lockBusy = ref(false)
 let eventSource: EventSource | null = null
 
@@ -763,6 +827,15 @@ async function selectBand(vfo: '0' | '1', code: string) {
       method: 'POST',
       body: { command: `BS${vfo}${code}` },
     })
+    if (state.value.firmware?.spa1 === null ) {
+      /* do nothing */
+    }
+    else {
+      await $fetch('/api/command', {
+        method: 'POST',
+        body: { command: `EX030704` },
+      })
+    }
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1409,6 +1482,34 @@ async function togglePreAmpUhf() {
   }
 }
 
+async function toggleAntSelect1() {
+  if (antSelectBusy.value || state.value.antSelect === null) return
+  antSelectBusy.value = true
+  try {
+    const cmd = 'EX0307040'
+    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await $fetch('/api/command', { method: 'POST', body: { command: `EX030704`} })
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    antSelectBusy.value = false
+  }
+}
+
+async function toggleAntSelect2() {
+  if (antSelectBusy.value || state.value.antSelect === null) return
+  antSelectBusy.value = true
+  try {
+    const cmd = 'EX0307041'
+    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await $fetch('/api/command', { method: 'POST', body: { command: `EX030704`} })
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    antSelectBusy.value = false
+  }
+}
+
 async function toggleAtt() {
   if (attBusy.value) return
   attBusy.value = true
@@ -1494,6 +1595,32 @@ async function toggleMox() {
     lastError.value = e.message
   } finally {
     moxBusy.value = false
+  }
+}
+
+async function switchToVfo(vfo: '0' | '1') {
+  if (txVfoBusy.value) return
+  txVfoBusy.value = true
+  try {
+    await $fetch('/api/command', { method: 'POST', body: { command: `FT${vfo}` } })
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    txVfoBusy.value = false
+  }
+}
+
+async function toggleRxMode() {
+  if (rxModeBusy.value) return
+  rxModeBusy.value = true
+  try {
+    // FR P1 P2 ; — P1P2: 00=Dual receive, 01=Single receive
+    const cmd = state.value.rxMode === 'dual' ? 'FR01' : 'FR00'
+    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    rxModeBusy.value = false
   }
 }
 
@@ -1604,11 +1731,72 @@ async function selectDcsCode(vfo: '0' | '1', idx: number) {
   }
 }
 
+// ── Saved channels ──────────────────────────────────────
+
+function saveChannelFromVfo(vfo: '0' | '1') {
+  const freq     = vfo === '0' ? state.value.mainFreq    : state.value.subFreq
+  const mode     = vfo === '0' ? state.value.mainMode    : state.value.subMode
+  const sqlType  = vfo === '0' ? state.value.mainSqlType : state.value.subSqlType
+  const ctcssIdx = vfo === '0' ? state.value.mainCtcssTone : state.value.subCtcssTone
+  const dcsIdx   = vfo === '0' ? state.value.mainDcsCode   : state.value.subDcsCode
+  if (freq == null) return
+  savedChannels.value = [
+    ...savedChannels.value,
+    { id: Date.now().toString(), freq, mode: mode ?? null, sqlType: sqlType ?? null, ctcssIdx: ctcssIdx ?? null, dcsIdx: dcsIdx ?? null },
+  ]
+  persistChannels()
+}
+
+async function applyChannel(ch: ChannelConfig) {
+  const vfo: '0' | '1' = state.value.txVfo === 1 ? '1' : '0'
+  const cmds: string[] = []
+  cmds.push((vfo === '0' ? 'FA' : 'FB') + String(ch.freq).padStart(9, '0'))
+  if (ch.mode) {
+    const entry = MODES.find(m => m.label === ch.mode)
+    if (entry) cmds.push(`MD${vfo}${entry.code}`)
+  }
+  if (ch.sqlType !== null) cmds.push(`CT${vfo}${ch.sqlType}`)
+  if (ch.ctcssIdx !== null) cmds.push(`CN${vfo}0${String(ch.ctcssIdx).padStart(3, '0')}`)
+  if (ch.dcsIdx !== null)   cmds.push(`CN${vfo}1${String(ch.dcsIdx).padStart(3, '0')}`)
+  for (const cmd of cmds) {
+    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+      .catch((e: any) => { lastError.value = e.message })
+  }
+}
+
+function deleteChannel(id: string) {
+  savedChannels.value = savedChannels.value.filter(c => c.id !== id)
+  persistChannels()
+}
+
+const sortedChannels = computed(() =>
+  [...savedChannels.value].sort((a, b) => a.freq - b.freq)
+)
+
+function chLabel(ch: ChannelConfig): string {
+  const mhz = (ch.freq / 1_000_000).toFixed(3)
+  return `${mhz}${ch.mode ? ' ' + ch.mode : ''}`
+}
+
+function chSqlLabel(ch: ChannelConfig): string | null {
+  if (!ch.sqlType) return null
+  if (ch.sqlType === 1 || ch.sqlType === 2) {
+    const hz = ch.ctcssIdx !== null ? CTCSS_TONES[ch.ctcssIdx]?.toFixed(1) : null
+    return hz ? `${sqlTypeLabel(ch.sqlType)} ${hz}Hz` : sqlTypeLabel(ch.sqlType)
+  }
+  if (ch.sqlType === 3) {
+    const code = ch.dcsIdx !== null ? DCS_CODES[ch.dcsIdx] : null
+    return code != null ? `DCS D${String(code).padStart(3, '0')}` : 'DCS'
+  }
+  return sqlTypeLabel(ch.sqlType)
+}
+
 // ----------- lifecycle -----------
 
 onMounted(async () => {
   const savedBaud = localStorage.getItem('cat_baud')
   if (savedBaud) selectedBaud.value = Number(savedBaud)
+  loadChannels()
   await Promise.all([refreshPorts(), loadPresets()])
   // Sync with server state (e.g. after page reload while transceiver is already connected)
   const s = await $fetch<TransceiverState>('/api/status')
@@ -1828,16 +2016,16 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px 20px;
+  position: relative;
 }
 
-.main-card { border-left: 3px solid #777777; }
-.sub-card { border-left: 3px solid #777777; }
+.main-card { border-left: 3px solid #444; }
+.sub-card  { border-left: 3px solid #444; }
 
-/* TX VFO — left accent turns red, subtle glow */
+/* Active (TX) VFO — full orange border */
 .vfo-card--tx-vfo {
-  border-left-color: #ffffff !important;
-  box-shadow: inset 0 0 0 1px rgba(248, 81, 73, .12);
-  border: 1px solid var(--border);
+  border-left: 3px solid #c35910;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, .15), inset 0 0 20px rgba(249, 115, 22, .04);
 }
 
 /* Single-receive inactive VFO — greyed out, non-interactive */
@@ -1846,6 +2034,29 @@ body {
   filter: grayscale(.4);
   pointer-events: none;
   user-select: none;
+}
+
+/* Single-receive inactive VFO in non-split mode — clickable to switch TX/RX */
+.vfo-card--switchable {
+  opacity: .35;
+  filter: grayscale(.4);
+  pointer-events: none;
+  user-select: none;
+}
+
+.vfo-switch-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+  pointer-events: all;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.vfo-switch-overlay:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* TX VFO badge in the card header */
@@ -2134,6 +2345,93 @@ body {
 }
 
 /* ── Presets section ── */
+/* ── Saved channels panel ── */
+.channels-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  flex: 0 0 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.channels-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.channels-count {
+  font-size: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 6px;
+  color: var(--text-muted);
+}
+
+.channels-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.channels-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.ch-badge:hover {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, .08);
+}
+
+.ch-freq {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ch-sql {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ch-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ch-del:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, .12);
+}
+
 .presets-section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2370,7 +2668,7 @@ body {
 
 .scope-level-track {
   flex: 1;
-  height: 7px;
+  height: 9px;
   background: #21262d;
   border: 1px solid #30363d;
   border-radius: 3px;

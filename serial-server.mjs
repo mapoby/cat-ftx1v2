@@ -85,8 +85,9 @@ class SerialManager extends EventEmitter {
       preAmpUhf: null,
       scopeSide: false,
       // SS — Band Scope settings
-      scope: { mode: null, span: null, speed: null, level: null, att: null, color: null, marker: null },
+      scope: { mode: null, span: null, speed: null, level: null, att: null, color: null, marker: true },
       firmware: { main: null, display: null, sdr: null, dsp: null, spa1: null, fc80: null },
+      antSelect: null,   // EX030704: 0=ANT1, 1=ANT2 (HF antenna select, SPA1 only)
       lastUpdate: Date.now(),
       error: null,
     }
@@ -245,7 +246,8 @@ class SerialManager extends EventEmitter {
     // The transceiver will reply with unsolicited frames that _handleResponse will parse.
     const INIT_CMDS = ['FA', 'FB', 'MD0', 'MD1', 'TX', 'MX', 'ST', 'GT0', 'GT1', 'AG0', 'AG1', 'RG0', 'RG1', 'PC', 'RI0',
                        'AO', 'MG', 'PR0', 'PR1', 'PL', 'VX', 'VG', 'SF', 'FR', 'FT', 'CT0', 'CT1', 'CN00', 'CN01', 'CN10', 'CN11', 'RL0',
-                       'RL1', 'RA0', 'LK', 'SQ0', 'SQ1', 'SS05', 'SS04', 'SS00', 'SS03', 'SS06', 'PA0', 'PA1', 'PA2', 'VE0', 'VE1', 'VE2', 'VE3', 'VE4', 'VE5']
+                       'RL1', 'RA0', 'LK', 'SQ0', 'SQ1', 'SS05', 'SS04', 'SS00', 'SS03', 'SS06', 'PA0', 'PA1', 'PA2', 'VE0', 'VE1', 'VE2', 'VE3', 'VE4', 'VE5',
+                       'EX030704']
     for (const cmd of INIT_CMDS) {
       if (!this.port?.isOpen) break
       try { await this.sendCommandNoWait(cmd) } catch { /* non-fatal */ }
@@ -425,6 +427,10 @@ class SerialManager extends EventEmitter {
           else if (params[0] === '5') s.fc80  = params.substring(2, 6)
           this.state.firmware = s   // new object reference — delta will detect it
         }
+        break
+      // EX — extended menu: EX030704P; P=0(ANT1) or 1(ANT2)
+      case 'EX':
+        if (params.startsWith('030704')) this.state.antSelect = params[6] === '1' ? 1 : 0
         break
       case 'RA': this.state.rfAttenuator = params[1] === '1' ? 1 : 0; break
       // PA — PRE-AMP: PAP1P2; P1=band(0=HF/50MHz,1=VHF,2=UHF)
