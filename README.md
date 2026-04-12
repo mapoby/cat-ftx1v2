@@ -18,19 +18,19 @@ If you want to use 115200 bps (what is recommeded), you need to firstly set it i
 When using the SPA-1 (Optima) amplifier, the CAT-3 port is used for communication with the SPA-1, **do not change then** its parameters.
 
 ### Changes ###
-Added the ability to select the active VFO (by clicking the green RX button or the entire panel if inactive).
-Added UP and DN buttons for the active VFO (they function like microphone buttons).
-Added support for presentation and adjustment of received bandwidth, including support for +/- 1200 Hz offset. This feature is available only for Main VFO.
-Added quick switching of the Narrow option.
-Added reading configuration of the "SQL / RF / SQL only for FM" operating modes, combined with display rf gain and squelch sliders for both VFO.
-Added control of Att, AMP and AGC mode switching.
-If an Optima amplifier is detected, the ability to select an antenna for HF has been added.
-Added functionality to remember the last selected port and baud rate.
-Added the ability to change numerical values using the mouse scroll wheel (frequency, DNR, PWR, MIC GAIN, AMC, PROC LEVEL and VOX GAIN).
-Added selectors for band, modulation mode, CTCSS and DCS tones.
-Adjustment of volume, squelch, and RF gain via mouse click.
-Added support for band scope settings with distinction between main and sub VFO.
-Added information about the transceiver firmware versions.
+- Added the ability to select the active VFO (by clicking the green RX button or the entire panel if inactive).
+- Added UP and DN buttons for the active VFO (they function like microphone buttons).
+- Added support for presentation and adjustment of received bandwidth, including support for +/- 1200 Hz offset. This feature is available only for Main VFO.
+- Added quick switching of the Narrow option.
+- Added reading configuration of the "SQL / RF / SQL only for FM" operating modes, combined with display rf gain and squelch sliders for both VFO.
+- Added control of ATT, AMP and AGC mode switching.
+- If an Optima amplifier is detected, the ability to select an antenna for HF has been added.
+- Added functionality to remember the last selected port and baud rate.
+- Added the ability to change numerical values using the mouse scroll wheel (frequency, DNR, PWR, MIC GAIN, AMC, PROC LEVEL and VOX GAIN).
+- Added selectors for band, modulation mode, CTCSS and DCS tones.
+- Adjustment of volume, squelch, and RF gain via mouse click.
+- Added support for band scope settings with distinction between main and sub VFO.
+- Added information about the transceiver firmware versions.
 
 ### Working with FTX-1 Memory ###
 Currently, the program does not access the internal channels memory of the FTX-1 in any way.
