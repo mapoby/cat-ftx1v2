@@ -8,13 +8,6 @@
       </div>
 
       <div class="conn-bar">
-        <select v-model="selectedPort" class="sel" :disabled="state.connected">
-          <option value="" disabled>Select port…</option>
-          <option v-for="p in ports" :key="p.path" :value="p.path">
-            {{ p.path }}<template v-if="p.manufacturer"> — {{ p.manufacturer }}</template>
-          </option>
-        </select>
-
         <select v-model="selectedBaud" class="sel baud-sel" :disabled="state.connected">
           <option :value="4800">4800</option>
           <option :value="9600">9600</option>
@@ -26,12 +19,14 @@
         <button class="btn" :class="state.connected ? 'btn-danger' : 'btn-primary'" @click="toggleConnection" :disabled="connecting">
           {{ connecting ? '…' : state.connected ? 'Disconnect' : 'Connect' }}
         </button>
+      </div>
 
-        <button class="btn btn-ghost" @click="refreshPorts" title="Refresh port list">⟳</button>
+      <div v-if="!isSupported" class="compat-warning">
+        ⚠ Web Serial API not supported — use Chrome or Edge
       </div>
 
       <div class="conn-status" :class="state.connected ? 'status-ok' : 'status-off'">
-        {{ state.connected ? `● Connected — ${state.port}` : '○ Disconnected' }}
+        {{ state.connected ? '● Connected' : '○ Disconnected' }}
       </div>
     </header>
 
@@ -596,148 +591,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { useSerial, type TransceiverState, type CommandResult } from '~/composables/useSerial'
+import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
 import LevelBar from '~/components/LevelBar.vue'
 import StatusBadge from '~/components/StatusBadge.vue'
 import PresetButton from '~/components/PresetButton.vue'
 
 // ----------- state -----------
-
-interface PortInfo {
-  path: string
-  manufacturer?: string
-}
-
-interface RadioInfo {
-  hiSwr: boolean
-  recording: boolean
-  playing: boolean
-  tx: boolean
-  txInhibit: boolean
-  tuning: boolean
-  scanning: boolean
-  squelchOpen: boolean
-}
-
-interface TransceiverState {
-  connected: boolean
-  port: string | null
-  baudRate: number
-  autoInfo: boolean
-  mainFreq: number | null
-  subFreq: number | null
-  mainMode: string | null
-  subMode: string | null
-  mainSmeter: number | null
-  subSmeter: number | null
-  txState: boolean
-  mox: boolean
-  split: boolean
-  lock: boolean | null
-  agcMain: string | null
-  rfGainMain: number | null
-  afGainMain: number | null
-  sqMain: number | null
-  agcSub: string | null
-  rfGainSub: string | null
-  afGainSub: number | null
-  sqSub: number | null
-  sqlRfMode: number | null
-  powerLevel: number | null
-  radioInfo: RadioInfo | null
-  amcLevel: number | null
-  micGain: number | null
-  speechProc: boolean | null
-  speechProcLevel: number | null
-  funcKnob: string | null
-  vox: boolean | null
-  voxGain: number | null
-  txVfo: 0 | 1 | null
-  rxMode: 'dual' | 'single' | null
-  mainSqlType: number | null
-  subSqlType: number | null
-  mainCtcssTone: number | null
-  subCtcssTone: number | null
-  mainDcsCode: number | null
-  subDcsCode: number | null
-  dnrMain: string | null
-  dnrSub: string | null
-  mainBandwidth: number | null
-  subBandwidth: number | null
-  mainShift: number | null
-  subShift: number | null
-  narrowMain: boolean | null
-  narrowSub: boolean | null
-  rfAttenuator: boolean
-  preAmpHf: number | null
-  preAmpVhf: boolean | null
-  preAmpUhf: boolean | null
-  scopeSide: boolean | null
-  scope: { mode: number | null, span: number | null, speed: number | null, level: number | null, att: number | null, color: number | null, marker: boolean | null } | null
-  firmware: { main: string | null, display: string | null, sdr: string | null, dsp: string | null, spa1: string | null, fc80: string | null } | null,
-  antSelect: number | null
-  lastUpdate: number
-  error: string | null
-}
-
-const defaultState = (): TransceiverState => ({
-  connected: false,
-  port: null,
-  baudRate: 38400,
-  autoInfo: false,
-  mainFreq: null,
-  subFreq: null,
-  mainMode: null,
-  subMode: null,
-  mainSmeter: null,
-  subSmeter: null,
-  txState: false,
-  mox: false,
-  split: false,
-  lock: null,
-  agcMain: null,
-  rfGainMain: null,
-  afGainMain: null,
-  sqMain: null,
-  agcSub: null,
-  rfGainSub: null,
-  afGainSub: null,
-  sqSub: null,
-  sqlRfMode: null,
-  powerLevel: null,
-  radioInfo: null,
-  amcLevel: null,
-  micGain: null,
-  speechProc: null,
-  speechProcLevel: null,
-  funcKnob: null,
-  vox: null,
-  voxGain: null,
-  txVfo: null,
-  rxMode: null,
-  mainSqlType: null, subSqlType: null,
-  mainCtcssTone: null, subCtcssTone: null,
-  mainDcsCode: null, subDcsCode: null,
-  dnrMain: null,
-  dnrSub: null,
-  mainBandwidth: null,
-  subBandwidth: null,
-  mainShift: null,
-  subShift: null,
-  narrowMain: null,
-  narrowSub: null,
-  rfAttenuator: false,
-  preAmpHf: null,
-  preAmpVhf: null,
-  preAmpUhf: null,
-  scopeSide: null,
-  scope: null,
-  firmware: { main: null, display: null, sdr: null, dsp: null, spa1: null, fc80: null },
-  antSelect: null,
-  lastUpdate: Date.now(),
-  error: null,
-})
-
 interface ChannelConfig {
   id: string
   freq: number
@@ -763,11 +624,8 @@ interface CommandResult {
   ok: boolean
 }
 
-const state = ref<TransceiverState>(defaultState())
-const ports = ref<PortInfo[]>([])
-const selectedPort = ref('')
+const { state, connecting, isSupported, connect, disconnect, send, sendPreset } = useSerial()
 const selectedBaud = ref(38400)
-const connecting = ref(false)
 const lastError = ref<string | null>(null)
 const manualCmd = ref('')
 const manualResponse = ref('')
@@ -795,7 +653,6 @@ const txVfoBusy = ref(false)
 const lockBusy   = ref(false)
 const narrowBusy = ref(false)
 const agcBusy    = ref(false)
-let eventSource: EventSource | null = null
 
 // ----------- computed -----------
 
@@ -854,18 +711,9 @@ async function selectBand(vfo: '0' | '1', code: string) {
     // Do NOT assign state here — BS uses sendCommandNoWait so the returned state
     // is pre-command (stale). The real update arrives via SSE after the transceiver
     // processes the command.
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `BS${vfo}${code}` },
-    })
-    if (state.value.firmware?.spa1 === null ) {
-      /* do nothing */
-    }
-    else {
-      await $fetch('/api/command', {
-        method: 'POST',
-        body: { command: `EX030704` },
-      })
+    await send(`BS${vfo}${code}`)
+    if (state.value.firmware?.spa1 !== null) {
+      await send('EX030704')
     }
   } catch (e: any) {
     lastError.value = e.message
@@ -878,10 +726,7 @@ async function sendUp() {
   if (bandBusy.value) return
   bandBusy.value = true
   try {
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `UP` },
-    })
+    await send('UP')
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -893,10 +738,7 @@ async function sendDn() {
   if (bandBusy.value) return
   bandBusy.value = true
   try {
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `DN` },
-    })
+    await send('DN')
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -963,7 +805,7 @@ async function onPwrWheel(event: WheelEvent) {
 
   if (next === state.value.powerLevel) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `PC${typePwr}${String(next).padStart(3, '0')}` } })
+    await send(`PC${typePwr}${String(next).padStart(3, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -974,7 +816,7 @@ async function onProcLevelWheel(event: WheelEvent) {
   const next = Math.max(0, Math.min(100, state.value.speechProcLevel + (event.deltaY < 0 ? 1 : -1)))
   if (next === state.value.speechProcLevel) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `PL${String(next).padStart(3, '0')}` } })
+    await send(`PL${String(next).padStart(3, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -985,7 +827,7 @@ async function onAmcWheel(event: WheelEvent) {
   const next = Math.max(1, Math.min(100, state.value.amcLevel + (event.deltaY < 0 ? 1 : -1)))
   if (next === state.value.amcLevel) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `AO${String(next).padStart(3, '0')}` } })
+    await send(`AO${String(next).padStart(3, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -996,7 +838,7 @@ async function onVoxGainWheel(event: WheelEvent) {
   const next = Math.max(0, Math.min(100, state.value.voxGain + (event.deltaY < 0 ? 1 : -1)))
   if (next === state.value.voxGain) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `VG${String(next).padStart(3, '0')}` } })
+    await send(`VG${String(next).padStart(3, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1007,7 +849,7 @@ async function onMicGainWheel(event: WheelEvent) {
   const next = Math.max(0, Math.min(100, state.value.micGain + (event.deltaY < 0 ? 1 : -1)))
   if (next === state.value.micGain) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `MG${String(next).padStart(3, '0')}` } })
+    await send(`MG${String(next).padStart(3, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1021,7 +863,7 @@ async function onDnrWheel(vfo: '0' | '1', event: WheelEvent) {
   const next = Math.max(DNR_MIN, Math.min(DNR_MAX, current + (event.deltaY < 0 ? 1 : -1)))
   if (next === current) return
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `RL${vfo}${String(next).padStart(2, '0')}` } })
+    await send(`RL${vfo}${String(next).padStart(2, '0')}`)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1029,7 +871,7 @@ async function onDnrWheel(vfo: '0' | '1', event: WheelEvent) {
 
 async function setBandwidth(vfo: '0' | '1', idx: number) {
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `SH${vfo}0${String(idx).padStart(2, '0')}` } })
+    await send(`SH${vfo}0${String(idx).padStart(2, '0')}`)
   } catch (e: any) { lastError.value = e.message }
 }
 
@@ -1037,7 +879,7 @@ async function setShift(vfo: '0' | '1', val: number) {
   try {
     const sign = val >= 0 ? '+' : '-';
     const abs = Math.abs(val).toFixed(0).padStart(4, '0');
-    await $fetch('/api/command', { method: 'POST', body: { command: `IS${vfo}0${sign}${abs}` } })
+    await send(`IS${vfo}0${sign}${abs}`)
   } catch (e: any) { lastError.value = e.message }
 }
 
@@ -1124,18 +966,15 @@ function onScopeLevelClick(e: MouseEvent) {
   const rect = track.getBoundingClientRect()
   const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
   const level = Math.round(pct * 120)
-  $fetch('/api/command', { method: 'POST', body: { command: buildScopeLevelCmd({ level }) } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(buildScopeLevelCmd({ level })).catch((e: any) => { lastError.value = e.message })
 }
 
 function setScopeSpan(span: number) {
-  $fetch('/api/command', { method: 'POST', body: { command: buildScopeSpanCmd({ span }) } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(buildScopeSpanCmd({ span })).catch((e: any) => { lastError.value = e.message })
 }
 
 function setScopeSpeed(speed: number) {
-  $fetch('/api/command', { method: 'POST', body: { command: buildScopeSpeedCmd({ speed }) } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(buildScopeSpeedCmd({ speed })).catch((e: any) => { lastError.value = e.message })
 }
 
 function buildScopeModeCmd(overrides: { mode?: number }): string {
@@ -1146,8 +985,7 @@ function buildScopeModeCmd(overrides: { mode?: number }): string {
 }
 
 function setScopeMode(mode: number) {
-  $fetch('/api/command', { method: 'POST', body: { command: buildScopeModeCmd({ mode }) } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(buildScopeModeCmd({ mode })).catch((e: any) => { lastError.value = e.message })
 }
 
 // COLOR: values 0–10 (0x0–0xA), labels COLOR 1–COLOR 11
@@ -1163,16 +1001,14 @@ function cycleScopeColor() {
   const next = current >= SCOPE_COLOR_MAX ? 0 : current + 1
   const hex = next.toString(16).toUpperCase()   // 0–9, A
   const side = state.value.scopeSide === null ? '0' : state.value.scopeSide? '1': '0';
-  $fetch('/api/command', { method: 'POST', body: { command: `SS${side}3${hex}0000` } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(`SS${side}3${hex}0000`).catch((e: any) => { lastError.value = e.message })
 }
 
 function toggleScopeMarker() {
   //if (state.value.scope?.marker === null) return
   const next = state.value.scope?.marker ? '0' : '1'   // 0=OFF, 1=ON
   const side = state.value.scopeSide === null ? '0' : state.value.scopeSide? '1': '0';
-  $fetch('/api/command', { method: 'POST', body: { command: `SS${side}2${next}0000` } })
-    .catch((e: any) => { lastError.value = e.message })
+  send(`SS${side}2${next}0000`).catch((e: any) => { lastError.value = e.message })
 }
 
 /** Human-readable SQL type label */
@@ -1248,7 +1084,7 @@ async function onFreqWheel(vfo: '0' | '1', groupIdx: number, event: WheelEvent) 
   if (newFreq === current) return
   const cmd = (vfo === '0' ? 'FA' : 'FB') + String(newFreq).padStart(9, '0')
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1311,7 +1147,7 @@ async function selectMode(vfo: '0' | '1', label: string) {
   modeBusy.value = true
   try {
     // MD P1 P2 ; — P1=0 main / 1 sub, P2=mode code
-    await $fetch('/api/command', { method: 'POST', body: { command: `MD${vfo}${entry.code}` } })
+    await send(`MD${vfo}${entry.code}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1371,132 +1207,41 @@ async function selectModeFromPopup(vfo: '0' | '1', label: string) {
 
 // ----------- API calls -----------
 
-async function refreshPorts() {
-  try {
-    const data = await $fetch<{ ports: PortInfo[] }>('/api/ports')
-    ports.value = data.ports
-    const savedPort = localStorage.getItem('cat_port')
-    if (savedPort && data.ports.some(p => p.path === savedPort)) {
-      selectedPort.value = savedPort
-    } else if (!selectedPort.value && data.ports.length > 0) {
-      selectedPort.value = data.ports[0].path
-    }
-  } catch (e: any) {
-    lastError.value = e.message ?? 'Failed to list ports'
-  }
-}
-
 async function toggleConnection() {
   if (state.value.connected) {
-    connecting.value = true
     try {
-      stopEventSource()
-      await $fetch('/api/disconnect', { method: 'POST' })
-      state.value = defaultState()
+      await disconnect()
     } catch (e: any) {
       lastError.value = e.message
-    } finally {
-      connecting.value = false
     }
   } else {
-    if (!selectedPort.value) {
-      lastError.value = 'Please select a port first'
+    if (!isSupported) {
+      lastError.value = 'Web Serial API not supported — please use Chrome or Edge.'
       return
     }
-    connecting.value = true
     try {
-      const data = await $fetch<{ ok: boolean; state: TransceiverState }>('/api/connect', {
-        method: 'POST',
-        body: { port: selectedPort.value, baudRate: selectedBaud.value },
-      })
-      state.value = data.state
-      localStorage.setItem('cat_port', selectedPort.value)
       localStorage.setItem('cat_baud', String(selectedBaud.value))
-      startEventSource()
+      await connect(selectedBaud.value)
     } catch (e: any) {
-      lastError.value = e.message ?? 'Connection failed'
-    } finally {
-      connecting.value = false
+      if ((e as DOMException).name !== 'NotFoundError') {
+        lastError.value = e.message ?? 'Connection failed'
+      }
     }
   }
 }
 
-/** One-shot status fetch — used after manual commands/presets for immediate feedback. */
-async function pollStatus() {
-  try {
-    const data = await $fetch<TransceiverState>('/api/status')
-    state.value = data
-  } catch {
-    // ignore transient errors
-  }
+function loadPresets() {
+  presets.value = (presetsData as any).presets ?? []
 }
 
-/**
- * Open a Server-Sent Events connection to the serial server.
- * The server pushes state updates whenever the transceiver sends an AI response
- * or the S-meter / params polls complete — no client-side interval required.
- */
-function startEventSource() {
-  stopEventSource()
-  const config = useRuntimeConfig()
-  const es = new EventSource(config.public.serialEventsUrl)
-
-  es.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data) as (TransceiverState & { _delta?: true })
-      if (msg._delta) {
-        // Delta frame — merge only the changed fields into the current state.
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _delta, ...changes } = msg
-        state.value = { ...state.value, ...(changes as Partial<TransceiverState>) }
-        if (changes.connected === false) stopEventSource()
-      } else {
-        // Full-state frame (sent on initial connect / reconnect).
-        state.value = msg as TransceiverState
-        if (!msg.connected) stopEventSource()
-      }
-    } catch { /* malformed frame */ }
-  }
-
-  es.onerror = () => {
-    // EventSource reconnects automatically; nothing to do here.
-    // If the transceiver was disconnected the server will push connected:false
-    // which will close the EventSource via the onmessage handler.
-  }
-
-  eventSource = es
-}
-
-function stopEventSource() {
-  if (eventSource) {
-    eventSource.close()
-    eventSource = null
-  }
-}
-
-async function loadPresets() {
-  try {
-    const data = await $fetch<{ presets: Preset[] }>('/api/presets')
-    presets.value = data.presets
-  } catch {
-    // Presets are optional — silently ignore if config file is missing
-  }
-}
-
-function onPresetExecuted(results: CommandResult[]) {
-  //pollStatus()
-}
+function onPresetExecuted(_results: CommandResult[]) {}
 
 async function toggleSpeechProc() {
   if (speechProcBusy.value || state.value.speechProc === null) return
   speechProcBusy.value = true
   try {
     const cmd = state.value.speechProc ? 'PR10' : 'PR11'
-    const data = await $fetch<{ response: string; state: TransceiverState }>('/api/command', {
-      method: 'POST',
-      body: { command: cmd },
-    })
-    state.value = data.state
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1510,11 +1255,7 @@ async function toggleVox() {
   try {
     // VX P1 ; — P1: 0=OFF, 1=ON
     const cmd = state.value.vox ? 'VX0' : 'VX1'
-    const data = await $fetch<{ response: string; state: TransceiverState }>('/api/command', {
-      method: 'POST',
-      body: { command: cmd },
-    })
-    state.value = data.state
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1528,7 +1269,7 @@ async function togglePreAmpHf() {
   try {
     // PA 0 P2 ; — P2: 0=IPO, 1=AMP1, 2=AMP2 (cycles 0→1→2→0)
     const next = ((state.value.preAmpHf) + 1) % 3
-    await $fetch('/api/command', { method: 'POST', body: { command: `PA0${next}` } })
+    await send(`PA0${next}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1541,10 +1282,10 @@ async function toggleRfSql() {
   preAmpBusy.value = true
   try {
     const next = ((state.value.sqlRfMode) + 1) % 3
-    await $fetch('/api/command', { method: 'POST', body: { command: `EX030102${next}` } })
+    await send(`EX030102${next}`)
   } catch (e: any) { lastError.value = e.message } finally { preAmpBusy.value = false }
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `EX030102` } })
+    await send(`EX030102`)
   } catch (e: any) { lastError.value = e.message } finally {  }
 }
 
@@ -1554,7 +1295,7 @@ async function togglePreAmpVhf() {
   try {
     // PA P1 P2 ; — P1=1 (VHF), P2: 0=OFF, 1=ON
     const cmd = state.value.preAmpVhf ? 'PA10' : 'PA11'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1568,7 +1309,7 @@ async function togglePreAmpUhf() {
   try {
     // PA P1 P2 ; — P1=2 (UHF), P2: 0=OFF, 1=ON
     const cmd = state.value.preAmpUhf ? 'PA20' : 'PA21'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1581,8 +1322,8 @@ async function toggleAntSelect1() {
   antSelectBusy.value = true
   try {
     const cmd = 'EX0307040'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
-    await $fetch('/api/command', { method: 'POST', body: { command: `EX030704`} })
+    await send(cmd)
+    await send('EX030704')
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1595,8 +1336,8 @@ async function toggleAntSelect2() {
   antSelectBusy.value = true
   try {
     const cmd = 'EX0307041'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
-    await $fetch('/api/command', { method: 'POST', body: { command: `EX030704`} })
+    await send(cmd)
+    await send('EX030704')
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1610,7 +1351,7 @@ async function toggleAtt() {
   try {
     // RA 0 P2 ; — P2: 0=OFF, 1=ON
     const cmd = state.value.rfAttenuator ? 'RA00' : 'RA01'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1624,7 +1365,7 @@ async function toggleLock() {
   try {
     // LK P1 ; — P1: 0=OFF, 1=ON
     const cmd = state.value.lock ? 'LK0' : 'LK1'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1647,7 +1388,7 @@ async function cycleAgc(vfo: '0' | '1') {
   const nextCodeToSend = (parseInt(nextCode, 10)  > 4) ? '0' : nextCode
   agcBusy.value = true
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `GT${vfo}${nextCodeToSend}` } })
+    await send(`GT${vfo}${nextCodeToSend}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1662,7 +1403,7 @@ async function toggleNarrow(vfo: '0' | '1') {
   narrowBusy.value = true
   try {
     // NA P1 P2 ; — P1=VFO(0/1), P2=0(OFF)/1(ON)
-    await $fetch('/api/command', { method: 'POST', body: { command: `NA${vfo}${current ? '0' : '1'}` } })
+    await send(`NA${vfo}${current ? '0' : '1'}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1678,10 +1419,7 @@ async function cycleSqlType(vfo: '0' | '1', current: number | null) {
   try {
     const next = current >= SQL_TYPE_MAX ? 0 : current + 1
     // CT P1 P2 ; — P1=VFO (0/1), P2=type (0-5)
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `CT${vfo}${next}` },
-    })
+    await send(`CT${vfo}${next}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1692,38 +1430,23 @@ async function cycleSqlType(vfo: '0' | '1', current: number | null) {
 async function setSquelch(vfo: '0' | '1', value: number) {
   const val = Math.max(0, Math.min(255, value))
   // SQ P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
-  await $fetch('/api/command', {
-    method: 'POST',
-    body: { command: `SQ${vfo}${String(val).padStart(3, '0')}` },
-  }).catch((e: any) => { lastError.value = e.message })
+  await send(`SQ${vfo}${String(val).padStart(3, '0')}`).catch((e: any) => { lastError.value = e.message })
   if (vfo==='1') {
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `SQ1` },
-    }).catch((e: any) => { lastError.value = e.message })
-    await $fetch('/api/command', {
-      method: 'POST',
-      body: { command: `SQ0` },
-    }).catch((e: any) => { lastError.value = e.message })
+    await send('SQ1').catch((e: any) => { lastError.value = e.message })
+    await send('SQ0').catch((e: any) => { lastError.value = e.message })
   }
 }
 
 async function setRfGain(vfo: '0' | '1', value: number) {
   const val = Math.max(0, Math.min(255, value))
   // RG P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
-  await $fetch('/api/command', {
-    method: 'POST',
-    body: { command: `RG${vfo}${String(val).padStart(3, '0')}` },
-  }).catch((e: any) => { lastError.value = e.message })
+  await send(`RG${vfo}${String(val).padStart(3, '0')}`).catch((e: any) => { lastError.value = e.message })
 }
 
 async function setAfGain(vfo: '0' | '1', value: number) {
   const val = Math.max(0, Math.min(255, value))
   // AG P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
-  await $fetch('/api/command', {
-    method: 'POST',
-    body: { command: `AG${vfo}${String(val).padStart(3, '0')}` },
-  }).catch((e: any) => { lastError.value = e.message })
+  await send(`AG${vfo}${String(val).padStart(3, '0')}`).catch((e: any) => { lastError.value = e.message })
 }
 
 async function toggleMox() {
@@ -1732,7 +1455,7 @@ async function toggleMox() {
   try {
     // MX P1 ; — P1: 0=OFF, 1=ON
     const cmd = state.value.mox ? 'MX0' : 'MX1'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1744,7 +1467,7 @@ async function switchToVfo(vfo: '0' | '1') {
   if (txVfoBusy.value) return
   txVfoBusy.value = true
   try {
-    await $fetch('/api/command', { method: 'POST', body: { command: `FT${vfo}` } })
+    await send(`FT${vfo}`)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1758,7 +1481,7 @@ async function toggleRxMode() {
   try {
     // FR P1 P2 ; — P1P2: 00=Dual receive, 01=Single receive
     const cmd = state.value.rxMode === 'dual' ? 'FR01' : 'FR00'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1772,7 +1495,7 @@ async function toggleSplit() {
   try {
     // ST P1 ; — P1: 0=OFF, 1=ON
     const cmd = state.value.split ? 'ST0' : 'ST1'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1786,7 +1509,7 @@ async function toggleSwap() {
   try {
     // ST P1 ; — P1: 0=OFF, 1=ON
     const cmd = 'SV'
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1798,11 +1521,7 @@ async function setFuncKnob(cmd: string) {
   if (funcKnobBusy.value) return
   funcKnobBusy.value = true
   try {
-    const data = await $fetch<{ response: string; state: TransceiverState }>('/api/command', {
-      method: 'POST',
-      body: { command: cmd },
-    })
-    state.value = data.state
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   } finally {
@@ -1814,12 +1533,8 @@ async function sendManualCommand() {
   const cmd = manualCmd.value.trim()
   if (!cmd) return
   try {
-    const data = await $fetch<{ response: string; state: TransceiverState }>('/api/command', {
-      method: 'POST',
-      body: { command: cmd },
-    })
-    manualResponse.value = data.response
-    state.value = data.state
+    await send(cmd)
+    manualResponse.value = 'Sent'
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1850,7 +1565,7 @@ async function selectCtcssTone(vfo: '0' | '1', idx: number) {
   try {
     // CN P1 P2 P3P3P3 — P1=VFO(0/1), P2=0(CTCSS), P3P3P3=3-digit zero-padded index
     const cmd = `CN${vfo}0${String(idx).padStart(3, '0')}`
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1881,7 +1596,7 @@ async function selectDcsCode(vfo: '0' | '1', idx: number) {
   try {
     // CN P1 P2 P3P3P3 — P1=VFO(0/1), P2=1(DCS), P3P3P3=3-digit zero-padded index
     const cmd = `CN${vfo}1${String(idx).padStart(3, '0')}`
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
   } catch (e: any) {
     lastError.value = e.message
   }
@@ -1917,7 +1632,7 @@ async function applyChannel(ch: ChannelConfig) {
   if (ch.ctcssIdx !== null) cmds.push(`CN${vfo}0${String(ch.ctcssIdx).padStart(3, '0')}`)
   if (ch.dcsIdx !== null)   cmds.push(`CN${vfo}1${String(ch.dcsIdx).padStart(3, '0')}`)
   for (const cmd of cmds) {
-    await $fetch('/api/command', { method: 'POST', body: { command: cmd } })
+    await send(cmd)
       .catch((e: any) => { lastError.value = e.message })
   }
 }
@@ -1951,19 +1666,15 @@ function chSqlLabel(ch: ChannelConfig): string | null {
 
 // ----------- lifecycle -----------
 
-onMounted(async () => {
+onMounted(() => {
   const savedBaud = localStorage.getItem('cat_baud')
   if (savedBaud) selectedBaud.value = Number(savedBaud)
   loadChannels()
-  await Promise.all([refreshPorts(), loadPresets()])
-  // Sync with server state (e.g. after page reload while transceiver is already connected)
-  const s = await $fetch<TransceiverState>('/api/status')
-  state.value = s
-  if (s.connected) startEventSource()
+  loadPresets()
 })
 
-onUnmounted(() => {
-  stopEventSource()
+onUnmounted(async () => {
+  if (state.value.connected) await disconnect()
 })
 </script>
 
@@ -2085,6 +1796,14 @@ body {
 .status-off { background: rgba(139,148,158,.1); color: var(--text-muted); }
 
 /* ── Error banner ── */
+.compat-warning {
+  background: #3d2e00;
+  border-bottom: 1px solid #d29922;
+  color: #d29922;
+  padding: 8px 20px;
+  font-size: 13px;
+}
+
 .error-banner {
   background: rgba(248,81,73,.12);
   border-bottom: 1px solid var(--red);
