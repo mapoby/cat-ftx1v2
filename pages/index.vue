@@ -39,6 +39,15 @@
     <!-- ── Main dashboard (only when connected) ── -->
     <main v-if="state.connected" class="dashboard">
 
+      <!-- ── Tab bar ── -->
+      <nav class="tab-bar">
+        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">Dashboard</button>
+        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'channels' }" @click="activeTab = 'channels'">Channel List</button>
+      </nav>
+
+      <!-- ── Dashboard tab ── -->
+      <div v-show="activeTab === 'dashboard'">
+
       <!-- TX/RX Indicator + FUNC KNOB row -->
       <div class="txbar">
         <div class="btns">
@@ -491,6 +500,86 @@
         <button class="btn btn-primary btn-sm" @click="sendManualCommand">Send</button>
         <span class="cmd-response" v-if="manualResponse">→ {{ manualResponse }}</span>
       </section>
+
+      </div><!-- end dashboard tab -->
+
+      <!-- ── Channel List tab ── -->
+      <div v-show="activeTab === 'channels'" class="channel-list-tab">
+        <div class="chlist-toolbar">
+          <div class="chlist-scan-range">
+            <span class="chlist-range-lbl">Slots</span>
+            <input type="number" v-model.number="chListScanFrom" min="1" max="999" class="slot-input" />
+            <span class="slot-sep">–</span>
+            <input type="number" v-model.number="chListScanTo" min="1" max="999" class="slot-input" />
+          </div>
+          <button class="btn btn-primary btn-sm" :disabled="chListScanning" @click="readAllFromRadio">
+            {{ chListScanning ? 'Reading…' : 'Read from Radio' }}
+          </button>
+          <button class="btn btn-sm" :disabled="chListWriting || !chListDirtyCount" @click="writeAllToRadio">
+            {{ chListWriting ? 'Writing…' : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
+          </button>
+          <span class="chlist-count" v-if="channelListRows.length">{{ channelListRows.length }} channels</span>
+        </div>
+
+        <div class="chlist-table-wrap">
+          <table class="chlist-table" v-if="channelListRows.length">
+            <thead>
+              <tr>
+                <th class="th-slot">Slot</th>
+                <th class="th-freq">Frequency (MHz)</th>
+                <th class="th-mode">Mode</th>
+                <th class="th-sql">SQL</th>
+                <th class="th-shift">Shift</th>
+                <th class="th-tag">Tag</th>
+                <th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in channelListRows" :key="row.slot" :class="{ 'row-dirty': row.dirty }">
+                <td class="td-slot">{{ row.slot }}</td>
+                <td>
+                  <input
+                    type="number" step="0.001" class="cell-input cell-freq"
+                    :value="(row.freq / 1_000_000).toFixed(6)"
+                    @change="updateRowFreq(row, ($event.target as HTMLInputElement).value)"
+                  />
+                </td>
+                <td>
+                  <select class="cell-select" v-model="row.mode" @change="row.dirty = true">
+                    <option v-for="m in MODES" :key="m.code" :value="m.label">{{ m.label }}</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="cell-select" v-model.number="row.sqlType" @change="row.dirty = true">
+                    <option :value="0">None</option>
+                    <option :value="1">CTCSS ENC</option>
+                    <option :value="2">CTCSS ENC+DEC</option>
+                    <option :value="3">DCS</option>
+                    <option :value="4">DCS ENC+DEC</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="cell-select" v-model.number="row.shift" @change="row.dirty = true">
+                    <option :value="0">Simplex</option>
+                    <option :value="1">+</option>
+                    <option :value="2">-</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" class="cell-input cell-tag" v-model="row.tag" maxlength="12" @input="row.dirty = true" />
+                </td>
+                <td class="td-actions">
+                  <button class="btn btn-xs" title="Recall to Main VFO" @click="recallRadioChannel(row)">Recall</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="chlist-empty">
+            Press "Read from Radio" to load memory channels
+          </div>
+        </div>
+      </div><!-- end channel list tab -->
+
     </main>
 
     <!-- ── Not connected screen ── -->
@@ -687,11 +776,27 @@ const preAmpBusy    = ref(false)
 const antSelectBusy = ref(false)
 const rxModeBusy = ref(false)
 const splitBusy = ref(false)
+const activeTab = ref<'dashboard' | 'channels'>('dashboard')
 const savedChannels = ref<ChannelConfig[]>([])
 const radioMemScanFrom = ref(1)
 const radioMemScanTo   = ref(99)
 const radioMemScanning = ref(false)
 const radioMemWriteSlots = ref<Record<string, number>>({})
+
+interface EditableChannel {
+  slot: number
+  freq: number
+  mode: string
+  sqlType: number
+  shift: number
+  tag: string
+  dirty: boolean
+}
+const channelListRows = ref<EditableChannel[]>([])
+const chListScanning  = ref(false)
+const chListWriting   = ref(false)
+const chListScanFrom  = ref(1)
+const chListScanTo    = ref(999)
 
 function loadChannels() {
   try {
@@ -1705,6 +1810,50 @@ const sortedRadioChannels = computed(() =>
   Object.values(state.value.radioChannels).sort((a, b) => a.slot - b.slot)
 )
 
+const chListDirtyCount = computed(() => channelListRows.value.filter(r => r.dirty).length)
+
+function syncChannelListFromState() {
+  channelListRows.value = sortedRadioChannels.value.map(ch => ({
+    slot:    ch.slot,
+    freq:    ch.freq,
+    mode:    ch.mode ?? 'USB',
+    sqlType: ch.sqlType ?? 0,
+    shift:   ch.shift,
+    tag:     ch.tag ?? '',
+    dirty:   false,
+  }))
+}
+
+function updateRowFreq(row: EditableChannel, mhzStr: string) {
+  const hz = Math.round(parseFloat(mhzStr) * 1_000_000)
+  if (!isNaN(hz) && hz > 0) { row.freq = hz; row.dirty = true }
+}
+
+async function readAllFromRadio() {
+  if (chListScanning.value) return
+  chListScanning.value = true
+  try {
+    await scanMemoryChannels(chListScanFrom.value, chListScanTo.value)
+    syncChannelListFromState()
+  } finally {
+    chListScanning.value = false
+  }
+}
+
+async function writeAllToRadio() {
+  if (chListWriting.value) return
+  chListWriting.value = true
+  try {
+    for (const row of channelListRows.value.filter(r => r.dirty)) {
+      await writeMemoryChannel(row.slot, { freq: row.freq, mode: row.mode, sqlType: row.sqlType, tag: row.tag || null })
+        .catch((e: any) => { lastError.value = e.message })
+      row.dirty = false
+    }
+  } finally {
+    chListWriting.value = false
+  }
+}
+
 async function scanRadioMemory() {
   if (radioMemScanning.value) return
   radioMemScanning.value = true
@@ -1715,7 +1864,7 @@ async function scanRadioMemory() {
   }
 }
 
-async function recallRadioChannel(ch: RadioChannel) {
+async function recallRadioChannel(ch: { slot: number }) {
   const slotStr = String(ch.slot).padStart(5, '0')
   await send('MC0' + slotStr).catch((e: any) => { lastError.value = e.message })
   await send('MA').catch((e: any) => { lastError.value = e.message })
@@ -2955,4 +3104,191 @@ body {
   color: #fff;
   font-weight: 700;
 }
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 0 0 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn--active {
+  color: var(--text);
+  border-bottom-color: #f97316;
+}
+
+/* ── Channel List tab ── */
+.channel-list-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chlist-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chlist-scan-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chlist-range-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.chlist-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.chlist-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.chlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.chlist-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  z-index: 1;
+}
+
+.chlist-table th {
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.chlist-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.chlist-table tbody tr:hover {
+  background: rgba(255,255,255,.03);
+}
+
+.chlist-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.row-dirty {
+  background: rgba(249, 115, 22, .06) !important;
+}
+
+.row-dirty .td-slot {
+  color: #f97316;
+}
+
+.td-slot {
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.td-actions {
+  padding: 2px 8px;
+}
+
+.cell-input {
+  background: var(--surface2);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 2px 5px;
+  transition: border-color .1s;
+}
+
+.cell-input:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.cell-freq {
+  width: 110px;
+}
+
+.cell-tag {
+  width: 110px;
+}
+
+.cell-select {
+  background: var(--surface2);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.cell-select:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.chlist-empty {
+  padding: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.th-slot    { width: 50px; }
+.th-freq    { width: 140px; }
+.th-mode    { width: 110px; }
+.th-sql     { width: 140px; }
+.th-shift   { width: 100px; }
+.th-tag     { width: 130px; }
+.th-actions { width: 70px; }
 </style>
