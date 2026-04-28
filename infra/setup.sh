@@ -14,7 +14,7 @@ GITHUB_REPO="${GITHUB_REPO:-mapoby/cat-ftx1v2}"  # owner/repo on GitHub
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RG="${APP_NAME}-rg"
+RG="${RG:-${APP_NAME}-rg}"
 
 echo "================================================================"
 echo " CAT FTX-1 — Azure Provisioning"
