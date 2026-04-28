@@ -407,6 +407,56 @@
             </div>
           </div>
           <div v-else class="channels-empty">No saved channels</div>
+
+          <!-- Save to radio row per saved channel -->
+          <div v-if="savedChannels.length > 0" class="channels-write-row">
+            <span class="channels-write-label">Write to radio slot:</span>
+            <div class="channels-write-list">
+              <div v-for="ch in sortedChannels" :key="ch.id" class="channels-write-item">
+                <span class="ch-freq-sm">{{ (ch.freq / 1_000_000).toFixed(3) }}</span>
+                <input
+                  type="number" min="1" max="999" placeholder="slot"
+                  class="slot-input"
+                  :value="radioMemWriteSlots[ch.id]"
+                  @input="radioMemWriteSlots[ch.id] = parseInt(($event.target as HTMLInputElement).value)"
+                />
+                <button
+                  class="btn btn-sm"
+                  :disabled="!radioMemWriteSlots[ch.id] || radioMemWriteSlots[ch.id] < 1"
+                  @click="writeChannelToRadio(ch)"
+                >→ Radio</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Radio memory panel -->
+        <section class="channels-panel">
+          <div class="channels-header">
+            <span class="scope-title">Radio Memory</span>
+            <span class="channels-count" v-if="sortedRadioChannels.length > 0">{{ sortedRadioChannels.length }}</span>
+            <div class="radio-mem-scan">
+              <input type="number" min="1" max="999" class="slot-input" v-model.number="radioMemScanFrom" />
+              <span class="slot-sep">–</span>
+              <input type="number" min="1" max="999" class="slot-input" v-model.number="radioMemScanTo" />
+              <button class="btn btn-sm" :disabled="radioMemScanning || !state.connected" @click="scanRadioMemory">
+                {{ radioMemScanning ? 'Scanning…' : 'Scan' }}
+              </button>
+            </div>
+          </div>
+          <div class="channels-list" v-if="sortedRadioChannels.length > 0">
+            <div
+              v-for="ch in sortedRadioChannels"
+              :key="ch.slot"
+              class="ch-badge"
+              :title="`Slot ${ch.slot}`"
+              @click="recallRadioChannel(ch)"
+            >
+              <span class="ch-freq">{{ radioChLabel(ch) }}</span>
+              <span v-if="ch.tag" class="ch-sql">{{ ch.tag }}</span>
+            </div>
+          </div>
+          <div v-else class="channels-empty">{{ state.connected ? 'Press Scan to read radio memory' : 'Connect to use radio memory' }}</div>
         </section>
 
         <!-- Presets panel -->
@@ -591,7 +641,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useSerial, type TransceiverState, type CommandResult } from '~/composables/useSerial'
+import { useSerial, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
 import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
 import LevelBar from '~/components/LevelBar.vue'
@@ -624,7 +674,7 @@ interface CommandResult {
   ok: boolean
 }
 
-const { state, connecting, isSupported, connect, disconnect, send, sendPreset } = useSerial()
+const { state, connecting, isSupported, connect, disconnect, send, sendPreset, scanMemoryChannels, writeMemoryChannel } = useSerial()
 const selectedBaud = ref(38400)
 const lastError = ref<string | null>(null)
 const manualCmd = ref('')
@@ -638,6 +688,10 @@ const antSelectBusy = ref(false)
 const rxModeBusy = ref(false)
 const splitBusy = ref(false)
 const savedChannels = ref<ChannelConfig[]>([])
+const radioMemScanFrom = ref(1)
+const radioMemScanTo   = ref(99)
+const radioMemScanning = ref(false)
+const radioMemWriteSlots = ref<Record<string, number>>({})
 
 function loadChannels() {
   try {
@@ -1646,6 +1700,39 @@ const sortedChannels = computed(() =>
   [...savedChannels.value].sort((a, b) => a.freq - b.freq)
 )
 
+// ── Radio memory channels ──────────────────────────────
+const sortedRadioChannels = computed(() =>
+  Object.values(state.value.radioChannels).sort((a, b) => a.slot - b.slot)
+)
+
+async function scanRadioMemory() {
+  if (radioMemScanning.value) return
+  radioMemScanning.value = true
+  try {
+    await scanMemoryChannels(radioMemScanFrom.value, radioMemScanTo.value)
+  } finally {
+    radioMemScanning.value = false
+  }
+}
+
+async function recallRadioChannel(ch: RadioChannel) {
+  const slotStr = String(ch.slot).padStart(5, '0')
+  await send('MC0' + slotStr).catch((e: any) => { lastError.value = e.message })
+  await send('MA').catch((e: any) => { lastError.value = e.message })
+}
+
+async function writeChannelToRadio(ch: ChannelConfig) {
+  const slot = radioMemWriteSlots.value[ch.id]
+  if (!slot || slot < 1 || slot > 999) return
+  await writeMemoryChannel(slot, { freq: ch.freq, mode: ch.mode, sqlType: ch.sqlType })
+    .catch((e: any) => { lastError.value = e.message })
+}
+
+function radioChLabel(ch: RadioChannel): string {
+  const mhz = (ch.freq / 1_000_000).toFixed(3)
+  return `${String(ch.slot).padStart(3, ' ')} ${mhz}${ch.mode ? ' ' + ch.mode : ''}`
+}
+
 function chLabel(ch: ChannelConfig): string {
   const mhz = (ch.freq / 1_000_000).toFixed(3)
   return `${mhz}${ch.mode ? ' ' + ch.mode : ''}`
@@ -2281,6 +2368,64 @@ body {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+.channels-write-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.channels-write-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.channels-write-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.channels-write-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.ch-freq-sm {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.slot-input {
+  width: 48px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 4px;
+  text-align: center;
+}
+
+.slot-sep {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.radio-mem-scan {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .ch-badge {

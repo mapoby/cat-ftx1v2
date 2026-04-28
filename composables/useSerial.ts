@@ -13,6 +13,13 @@ const MODE_MAP: Record<string, string> = {
   'F': 'DATA-FM-N', 'H': 'C4FM-DN', 'I': 'C4FM-VW',
 }
 
+const MODE_CODE: Record<string, string> = {
+  'AMS': '0', 'LSB': '1', 'USB': '2', 'CW-U': '3', 'FM': '4',
+  'AM': '5', 'RTTY-L': '6', 'CW-L': '7', 'DATA-L': '8', 'RTTY-U': '9',
+  'DATA-FM': 'A', 'FM-N': 'B', 'DATA-U': 'C', 'AM-N': 'D', 'PSK': 'E',
+  'DATA-FM-N': 'F', 'C4FM-DN': 'H', 'C4FM-VW': 'I',
+}
+
 const AGC_MAP: Record<string, string> = {
   '0': 'OFF', '1': 'FAST', '2': 'MID', '3': 'SLOW',
   '4': 'AUTO-F', '5': 'AUTO-M', '6': 'AUTO-S',
@@ -93,6 +100,7 @@ export interface TransceiverState {
     dsp: string | null; spa1: string | null; fc80: string | null
   }
   antSelect: number | null
+  radioChannels: Record<number, RadioChannel>
   lastUpdate: number
   error: string | null
 }
@@ -102,6 +110,22 @@ export interface CommandResult {
   response?: string
   error?: string
   ok: boolean
+}
+
+export interface RadioChannel {
+  slot: number
+  freq: number
+  mode: string | null
+  sqlType: number | null
+  shift: number       // 0=simplex 1=plus 2=minus
+  tag: string | null
+}
+
+export interface MemoryWriteConfig {
+  freq: number
+  mode: string | null
+  sqlType?: number | null
+  tag?: string | null
 }
 
 function defaultState(): TransceiverState {
@@ -129,6 +153,7 @@ function defaultState(): TransceiverState {
     scopeSide: null, scope: null,
     firmware: { main: null, display: null, sdr: null, dsp: null, spa1: null, fc80: null },
     antSelect: null,
+    radioChannels: {},
     lastUpdate: Date.now(), error: null,
   }
 }
@@ -445,6 +470,38 @@ function _parseResponse(cmd: string, params: string, sourceCmd: string | null = 
       break
 
     case 'AI': ch.autoInfo = params[0] === '1'; break
+
+    case 'MR':
+      if (params.length >= 27) {
+        const slot = parseInt(params.substring(0, 5), 10)
+        const freq = parseInt(params.substring(5, 14), 10)
+        const mode = MODE_MAP[params[21]?.toUpperCase()] ?? null
+        const sqlType = parseInt(params[23], 10)
+        const shift = parseInt(params[26], 10)
+        if (slot > 0 && freq > 0) {
+          const channels = { ...s.radioChannels }
+          channels[slot] = {
+            slot, freq, mode,
+            sqlType: isNaN(sqlType) ? null : sqlType,
+            shift: isNaN(shift) ? 0 : shift,
+            tag: s.radioChannels[slot]?.tag ?? null,
+          }
+          ch.radioChannels = channels
+        }
+      }
+      break
+
+    case 'MT':
+      if (params.length >= 5) {
+        const slot = parseInt(params.substring(0, 5), 10)
+        const tag = params.substring(5, 17).trimEnd()
+        if (slot > 0 && s.radioChannels[slot]) {
+          const channels = { ...s.radioChannels }
+          channels[slot] = { ...channels[slot], tag }
+          ch.radioChannels = channels
+        }
+      }
+      break
   }
 
   if (Object.keys(ch).length > 0) _patch(ch)
@@ -600,7 +657,37 @@ export async function sendPreset(commands: string[]): Promise<CommandResult[]> {
   return results
 }
 
+export async function readMemoryChannel(slot: number): Promise<RadioChannel | null> {
+  const slotStr = String(slot).padStart(5, '0')
+  try {
+    await _sendAndWait('MR' + slotStr, 1500)
+    return state.value.radioChannels[slot] ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
+  for (let i = from; i <= to; i++) {
+    if (!state.value.connected) break
+    await readMemoryChannel(i)
+  }
+}
+
+export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig): Promise<void> {
+  const slotStr = String(slot).padStart(5, '0')
+  const freqStr = String(config.freq).padStart(9, '0')
+  const modeCode = MODE_CODE[config.mode ?? ''] ?? '2'
+  const sqlCode = String(config.sqlType ?? 0)
+  const payload = slotStr + freqStr + '+0000' + '00' + modeCode + '1' + sqlCode + '001'
+  await _sendAndWait('MW' + payload, 1500)
+  if (config.tag) {
+    const tag = config.tag.substring(0, 12).padEnd(12, ' ')
+    await _sendAndWait('MT' + slotStr + tag, 1500)
+  }
+}
+
 /** Composable entry-point — returns the singleton controller. */
 export function useSerial() {
-  return { state, connecting, isSupported, connect, disconnect, send, sendPreset }
+  return { state, connecting, isSupported, connect, disconnect, send, sendPreset, readMemoryChannel, scanMemoryChannels, writeMemoryChannel }
 }
