@@ -1,44 +1,149 @@
-# cat-ftx1
-CAT-Based Graphic Remote Control Software for Yaesu FTX-1.
+# CAT FTX-1 v2
 
-A Node.js and browser-based application for control the Yaesu FTX-1 radio transceiver using the CAT (Computer Aided Transceiver) protocol over USB serial.
+Browser-based remote control for the Yaesu FTX-1 transceiver using the CAT (Computer Aided Transceiver) protocol over USB serial.
 
-The solution is designed to make it easier to use the transceiver by eliminating the need to click through multiple menu options. 
-The technology used allows the application to run on various operating systems including Windows, macOS, and Linux
-
-The app works by establishing a connection and identifying the transceiver. Once the FTX-1 is detected, auto-information mode is activated, which sends all parameter changes to the app; these changes are then displayed graphically in the web browser.
+The app eliminates navigating transceiver menus by exposing all controls graphically in a web browser. Once connected, auto-information mode activates and streams all parameter changes in real time.
 
 ![FTX-1 Console Screenshot](https://github.com/rzochowski/cat-ftx1/blob/main/docs/ui-screenshot.png)
 
-### Establishing a Connection ###
-The program works correctly on all three CAT interfaces provided by the transceiver.
-However, please note the connection parameters defined in the FTX-1 configuration (Operation setting -> General -> CAT-1 rate, CAT-2 rate, CAT-3 rate) must corespond to values in the connection parameters on your computer.
-Due to the large amount of data being transmitted, the best performance is achieved by setting the CAT port to 115200 bps in the transceiver\'s configuration.
-If you want to use 115200 bps (what is recommeded), you need to firstly set it in FTX-1 Operation settings.
-When using the SPA-1 (Optima) amplifier, the CAT-3 port is used for communication with the SPA-1, **do not change then** its parameters.
+---
 
-### Changes ###
-- Added the ability to select the active VFO (by clicking the green RX button or the entire panel if inactive).
-- Added UP and DN buttons for the active VFO (they function like microphone buttons).
-- Added support for presentation and adjustment of received bandwidth, including support for +/- 1200 Hz offset. This feature is available only for Main VFO.
-- Added quick switching of the Narrow option.
-- Added reading configuration of the "SQL / RF / SQL only for FM" operating modes, combined with display rf gain and squelch sliders for both VFO.
-- Added control of ATT, AMP and AGC mode switching.
-- If an Optima amplifier is detected, the ability to select an antenna for HF has been added.
-- Added functionality to remember the last selected port and baud rate.
-- Added the ability to change numerical values using the mouse scroll wheel (frequency, DNR, PWR, MIC GAIN, AMC, PROC LEVEL and VOX GAIN).
-- Added selectors for band, modulation mode, CTCSS and DCS tones.
-- Adjustment of volume, squelch, and RF gain via mouse click.
-- Added support for band scope settings with distinction between main and sub VFO.
-- Added information about the transceiver firmware versions.
+## Tech Stack
 
-### Working with FTX-1 Memory ###
-Currently, the program does not access the internal channels memory of the FTX-1 in any way.
-The function for saving and recalling stored frequencies is handled by the program. When the “SAVE CH: Add” button is pressed, the current frequency, modulation type and tone squelch parameters are saved in local storage.
+### Frontend
 
-### General notes ###
-The program is still in the early phase and may contain errors; it uses actual transceiver responses, which sometimes differ from those in the Yaesu CAT manual.
-In some cases, the transceiver\'s responses are incorrect (e.g., setting the squelch on VFO Sub correctly sets the value, but the transceiver reports that the value for VFO Main has been changed).
-The direction of the program\'s future development will depend on users feedback.
+| | |
+| --- | --- |
+| Framework | [Nuxt 3](https://nuxt.com) v3.13 (Vue 3, SSR disabled — pure SPA) |
+| Build output | Static files via `nuxt generate` → `.output/public` |
+| Language | TypeScript 5, Vue 3 Composition API |
+| Serial | Browser-native [Web Serial API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API) — no backend required |
+| Pattern matching | [magic-regexp](https://github.com/danielroe/magic-regexp) v0.11 for CAT response parsing |
 
-**Author:** SP9AX
+### Container
+
+| | |
+| --- | --- |
+| Builder image | `node:22-alpine` — installs deps, runs `nuxt generate` |
+| Serve image | `nginx:1.27-alpine` — serves static files, ~20 MB final image |
+| Web server | nginx with SPA fallback, gzip, asset caching, `/health` endpoint |
+
+### Cloud Infrastructure (Azure)
+
+| Resource | Details |
+| --- | --- |
+| Container Registry | Azure Container Registry — Basic SKU (`catftx1webacr.azurecr.io`) |
+| App Service Plan | Linux B1 SKU (`catftx1web-plan`) |
+| Web App | Linux container, HTTPS-only (`catftx1web-app.azurewebsites.net`) |
+| Resource group | `ev-catftx1web-rg` — UK South region |
+| IaC | Bicep (`infra/main.bicep`) |
+
+### CI/CD (GitHub Actions)
+
+| | |
+| --- | --- |
+| Trigger | Push to `main`, or manual `workflow_dispatch` |
+| Auth | OIDC — no stored passwords; short-lived token minted per run |
+| Steps | Checkout → Azure login → ACR login → Docker build & push → Web App deploy |
+| Image tags | `:sha` (immutable, used for deploy) + `:latest` (for ACR UI) |
+| Workflow | `.github/workflows/azure-deploy.yml` |
+
+---
+
+## Local Development
+
+> Web Serial API requires HTTPS or `localhost` — the Nuxt dev server satisfies this.
+
+```bash
+npm install
+npm run dev          # dev server at http://localhost:3000
+npm run generate     # build static site → .output/public
+```
+
+Run with Docker locally:
+
+```bash
+docker build -t cat-ftx1 .
+docker run -p 8080:80 cat-ftx1
+# open http://localhost:8080
+```
+
+---
+
+## One-time Azure Setup
+
+Infrastructure is provisioned by a single script. Run it from a machine already authenticated with `az login`:
+
+```bash
+APP_NAME=catftx1web RG=ev-catftx1web-rg LOCATION=uksouth GITHUB_REPO=mapoby/cat-ftx1v2 bash infra/setup.sh
+```
+
+The script creates:
+
+1. Resource group
+2. ACR + App Service Plan + Web App (via Bicep)
+3. Entra ID app registration + service principal
+4. OIDC federated credential bound to `refs/heads/main`
+5. Contributor role on the resource group + Reader on the subscription
+
+After running, add the printed values to **GitHub → Settings → Secrets and variables → Actions**:
+
+| Type | Name |
+| --- | --- |
+| Secret | `AZURE_CLIENT_ID` |
+| Secret | `AZURE_TENANT_ID` |
+| Secret | `AZURE_SUBSCRIPTION_ID` |
+| Variable | `ACR_NAME` |
+| Variable | `ACR_LOGIN_SERVER` |
+| Variable | `AZURE_WEBAPP_NAME` |
+
+The first push to `main` triggers a full build and deploy.
+
+---
+
+## Connection
+
+The app works on all three CAT interfaces (CAT-1, CAT-2, CAT-3). Set the baud rate in the transceiver's Operation settings to match your computer:
+
+- **Recommended:** 115200 bps for best performance
+- CAT-3 is reserved for the SPA-1 (Optima) amplifier — do not change its parameters if an Optima is connected
+
+---
+
+## Features
+
+- Active VFO selection (click RX button or inactive panel)
+- UP/DN buttons (equivalent to microphone buttons)
+- Received bandwidth display and adjustment, including ±1200 Hz offset (Main VFO only)
+- Narrow mode quick-switch
+- SQL / RF / SQL-only-for-FM mode display, with RF gain and squelch sliders per VFO
+- ATT, AMP and AGC mode switching
+- Antenna selection for HF when an Optima amplifier is detected
+- Last-used port and baud rate remembered across sessions
+- Mouse scroll wheel for numerical values (frequency, DNR, PWR, MIC GAIN, AMC, PROC LEVEL, VOX GAIN)
+- Band, modulation mode, CTCSS and DCS tone selectors
+- Volume, squelch, and RF gain via mouse click
+- Band scope settings with Main / Sub VFO distinction
+- Transceiver firmware version display
+- Frequency save/recall via browser local storage (not FTX-1 internal memory)
+
+---
+
+## Key Files
+
+| File | Purpose |
+| --- | --- |
+| `composables/useSerial.ts` | All Web Serial logic and CAT protocol parsing |
+| `pages/index.vue` | Main UI |
+| `components/` | BandwidthDisplay, LevelBar, SMeter, StatusBadge, PresetButton |
+| `cat-presets.json` | Preset command definitions |
+| `nuxt.config.ts` | SSR off, devtools off |
+| `Dockerfile` | Multi-stage build (node builder → nginx) |
+| `nginx.conf` | SPA fallback, gzip, asset caching, `/health` |
+| `infra/main.bicep` | Azure IaC — ACR + App Service Plan + Web App |
+| `infra/setup.sh` | One-time provisioning script |
+| `.github/workflows/azure-deploy.yml` | CI/CD pipeline |
+
+---
+
+**Original author:** SP9AX
