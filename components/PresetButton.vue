@@ -38,6 +38,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useSerial, type CommandResult } from '~/composables/useSerial'
 
 interface Preset {
   id: string
@@ -48,13 +49,6 @@ interface Preset {
   commands: string[]
 }
 
-interface CommandResult {
-  command: string
-  response?: string
-  error?: string
-  ok: boolean
-}
-
 const props = defineProps<{
   preset: Preset
   connected: boolean
@@ -63,6 +57,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   executed: [results: CommandResult[]]
 }>()
+
+const { sendPreset } = useSerial()
 
 const running = ref(false)
 const flashState = ref<'ok' | 'error' | null>(null)
@@ -81,10 +77,8 @@ async function execute() {
   flashState.value = null
   progress.value = `0 / ${props.preset.commands.length}`
 
-  // Show per-command progress by polling the index client-side
-  let progressInterval: ReturnType<typeof setInterval> | null = null
   let step = 0
-  progressInterval = setInterval(() => {
+  const progressInterval = setInterval(() => {
     if (step < props.preset.commands.length - 1) {
       step++
       progress.value = `${step} / ${props.preset.commands.length}`
@@ -92,24 +86,20 @@ async function execute() {
   }, 120)
 
   try {
-    const data = await $fetch<{ ok: boolean; results: CommandResult[] }>('/api/preset-execute', {
-      method: 'POST',
-      body: { commands: props.preset.commands },
-    })
-
-    const failed = data.results.filter(r => !r.ok)
+    const results = await sendPreset(props.preset.commands)
+    const failed = results.filter(r => !r.ok)
     if (failed.length > 0) {
       flashState.value = 'error'
       errorMsg.value = `${failed[0].command}: ${failed[0].error}`
     } else {
       flashState.value = 'ok'
     }
-    emit('executed', data.results)
+    emit('executed', results)
   } catch (e: any) {
     flashState.value = 'error'
-    errorMsg.value = e.data?.message ?? e.message ?? 'Błąd'
+    errorMsg.value = e.message ?? 'Error'
   } finally {
-    clearInterval(progressInterval!)
+    clearInterval(progressInterval)
     running.value = false
     if (flashTimer) clearTimeout(flashTimer)
     flashTimer = setTimeout(() => { flashState.value = null }, 3000)

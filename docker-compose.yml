@@ -1,0 +1,10 @@
+services:
+  cat-ftx1:
+    build: .
+    image: cat-ftx1:latest
+    container_name: cat-ftx1
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    labels:
+      - "com.sp9ax.app=cat-ftx1"
