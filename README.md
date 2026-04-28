@@ -146,4 +146,9 @@ The app works on all three CAT interfaces (CAT-1, CAT-2, CAT-3). Set the baud ra
 
 ---
 
-**Original author:** SP9AX
+## Credits
+
+| | |
+| --- | --- |
+| Original author | [SP9AX — Radosław Żochowski](https://github.com/rzochowski/cat-ftx1) |
+| Forked and developed | 2E0MIK — Michael N |
