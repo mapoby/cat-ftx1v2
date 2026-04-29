@@ -505,6 +505,8 @@
 
       <!-- ── Channel List tab ── -->
       <div v-show="activeTab === 'channels'" class="channel-list-tab">
+
+        <!-- Toolbar -->
         <div class="chlist-toolbar">
           <div class="chlist-scan-range">
             <span class="chlist-range-lbl">Slots</span>
@@ -512,31 +514,59 @@
             <span class="slot-sep">–</span>
             <input type="number" v-model.number="chListScanTo" min="1" max="999" class="slot-input" />
           </div>
-          <button class="btn btn-primary btn-sm" :disabled="chListScanning" @click="readAllFromRadio">
+          <button class="btn btn-primary btn-sm" :disabled="chListScanning || !state.connected" @click="readAllFromRadio">
             {{ chListScanning ? 'Reading…' : 'Read from Radio' }}
           </button>
-          <button class="btn btn-sm" :disabled="chListWriting || !chListDirtyCount" @click="writeAllToRadio">
+          <button class="btn btn-sm" :disabled="chListWriting || !chListDirtyCount || !state.connected" @click="writeAllToRadio">
             {{ chListWriting ? 'Writing…' : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
+          <div class="chlist-toolbar-sep" />
+          <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
+          <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length">Export CSV</button>
+          <button class="btn btn-sm" @click="triggerImport">Import CSV</button>
+          <input ref="csvImportRef" type="file" accept=".csv,text/csv" class="csv-hidden-input" @change="onImportCsv" />
           <span class="chlist-count" v-if="channelListRows.length">{{ channelListRows.length }} channels</span>
         </div>
 
+        <!-- Table -->
         <div class="chlist-table-wrap">
           <table class="chlist-table" v-if="channelListRows.length">
             <thead>
               <tr>
+                <th class="th-drag"></th>
                 <th class="th-slot">Slot</th>
                 <th class="th-freq">Frequency (MHz)</th>
                 <th class="th-mode">Mode</th>
-                <th class="th-sql">SQL</th>
+                <th class="th-sql">SQL Type</th>
+                <th class="th-ctcss">CTCSS (Hz)</th>
+                <th class="th-dcs">DCS</th>
                 <th class="th-shift">Shift</th>
-                <th class="th-tag">Tag</th>
+                <th class="th-tag">Tag / Name</th>
                 <th class="th-actions"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in channelListRows" :key="row.slot" :class="{ 'row-dirty': row.dirty }">
-                <td class="td-slot">{{ row.slot }}</td>
+              <tr
+                v-for="(row, idx) in channelListRows"
+                :key="idx"
+                :class="{
+                  'row-dirty':     row.dirty,
+                  'row-drag-over': dragOverIdx === idx && dragSrcIdx !== idx,
+                }"
+                draggable="true"
+                @dragstart="onDragStart($event, idx)"
+                @dragover="onDragOver($event, idx)"
+                @dragend="onDragEnd"
+                @drop="onDrop($event, idx)"
+              >
+                <td class="td-drag">⠿</td>
+                <td class="td-slot-edit">
+                  <input
+                    type="number" min="1" max="999" class="cell-input cell-slot"
+                    :value="row.slot"
+                    @change="updateRowSlot(row, ($event.target as HTMLInputElement).value)"
+                  />
+                </td>
                 <td>
                   <input
                     type="number" step="0.001" class="cell-input cell-freq"
@@ -559,23 +589,50 @@
                   </select>
                 </td>
                 <td>
-                  <select class="cell-select" v-model.number="row.shift" @change="row.dirty = true">
-                    <option :value="0">Simplex</option>
-                    <option :value="1">+</option>
-                    <option :value="2">-</option>
+                  <select
+                    class="cell-select cell-ctcss"
+                    :disabled="row.sqlType < 1 || row.sqlType > 2"
+                    v-model.number="row.ctcssIdx"
+                    @change="row.dirty = true"
+                  >
+                    <option :value="null">—</option>
+                    <option v-for="(hz, i) in CTCSS_TONES" :key="i" :value="i">{{ hz.toFixed(1) }}</option>
                   </select>
                 </td>
                 <td>
-                  <input type="text" class="cell-input cell-tag" v-model="row.tag" maxlength="12" @input="row.dirty = true" />
+                  <select
+                    class="cell-select cell-dcs"
+                    :disabled="row.sqlType < 3"
+                    v-model.number="row.dcsIdx"
+                    @change="row.dirty = true"
+                  >
+                    <option :value="null">—</option>
+                    <option v-for="(code, i) in DCS_CODES" :key="i" :value="i">D{{ String(code).padStart(3, '0') }}</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="cell-select" v-model.number="row.shift" @change="row.dirty = true">
+                    <option :value="0">Simplex</option>
+                    <option :value="1">+</option>
+                    <option :value="2">−</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="text" class="cell-input cell-tag" v-model="row.tag"
+                    maxlength="12" @input="row.dirty = true"
+                    :placeholder="(row.mode === 'C4FM-DN' || row.mode === 'C4FM-VW') ? 'YSF group…' : ''"
+                  />
                 </td>
                 <td class="td-actions">
-                  <button class="btn btn-xs" title="Recall to Main VFO" @click="recallRadioChannel(row)">Recall</button>
+                  <button class="btn btn-xs" title="Recall to Main VFO" :disabled="!state.connected" @click="recallRadioChannel(row)">Recall</button>
+                  <button class="btn btn-xs btn-del" title="Delete row" @click="deleteChannelRow(idx)">✕</button>
                 </td>
               </tr>
             </tbody>
           </table>
           <div v-else class="chlist-empty">
-            Press "Read from Radio" to load memory channels
+            Press "Read from Radio" to load channels, or "Add Channel" / "Import CSV" to start manually.
           </div>
         </div>
       </div><!-- end channel list tab -->
@@ -788,6 +845,8 @@ interface EditableChannel {
   freq: number
   mode: string
   sqlType: number
+  ctcssIdx: number | null
+  dcsIdx: number | null
   shift: number
   tag: string
   dirty: boolean
@@ -797,6 +856,9 @@ const chListScanning  = ref(false)
 const chListWriting   = ref(false)
 const chListScanFrom  = ref(1)
 const chListScanTo    = ref(999)
+const dragSrcIdx      = ref<number | null>(null)
+const dragOverIdx     = ref<number | null>(null)
+const csvImportRef    = ref<HTMLInputElement | null>(null)
 
 function loadChannels() {
   try {
@@ -1814,19 +1876,145 @@ const chListDirtyCount = computed(() => channelListRows.value.filter(r => r.dirt
 
 function syncChannelListFromState() {
   channelListRows.value = sortedRadioChannels.value.map(ch => ({
-    slot:    ch.slot,
-    freq:    ch.freq,
-    mode:    ch.mode ?? 'USB',
-    sqlType: ch.sqlType ?? 0,
-    shift:   ch.shift,
-    tag:     ch.tag ?? '',
-    dirty:   false,
+    slot:     ch.slot,
+    freq:     ch.freq,
+    mode:     ch.mode ?? 'USB',
+    sqlType:  ch.sqlType ?? 0,
+    ctcssIdx: null,
+    dcsIdx:   null,
+    shift:    ch.shift,
+    tag:      ch.tag ?? '',
+    dirty:    false,
   }))
 }
 
 function updateRowFreq(row: EditableChannel, mhzStr: string) {
   const hz = Math.round(parseFloat(mhzStr) * 1_000_000)
   if (!isNaN(hz) && hz > 0) { row.freq = hz; row.dirty = true }
+}
+
+function updateRowSlot(row: EditableChannel, newSlotStr: string) {
+  const n = parseInt(newSlotStr)
+  if (isNaN(n) || n < 1 || n > 999) return
+  row.slot = n
+  row.dirty = true
+  channelListRows.value = [...channelListRows.value].sort((a, b) => a.slot - b.slot)
+}
+
+function addNewChannel() {
+  const maxSlot = channelListRows.value.reduce((m, r) => Math.max(m, r.slot), 0)
+  channelListRows.value = [...channelListRows.value, {
+    slot: Math.min(maxSlot + 1, 999),
+    freq: 145_500_000,
+    mode: 'FM',
+    sqlType: 0,
+    ctcssIdx: null,
+    dcsIdx: null,
+    shift: 0,
+    tag: '',
+    dirty: true,
+  }]
+}
+
+function deleteChannelRow(idx: number) {
+  channelListRows.value = channelListRows.value.filter((_, i) => i !== idx)
+}
+
+function onDragStart(e: DragEvent, idx: number) {
+  dragSrcIdx.value = idx
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(e: DragEvent, idx: number) {
+  e.preventDefault()
+  dragOverIdx.value = idx
+}
+
+function onDragEnd() {
+  dragSrcIdx.value = null
+  dragOverIdx.value = null
+}
+
+function onDrop(e: DragEvent, idx: number) {
+  e.preventDefault()
+  const src = dragSrcIdx.value
+  if (src === null || src === idx) { onDragEnd(); return }
+  const rows = [...channelListRows.value]
+  const [moved] = rows.splice(src, 1)
+  rows.splice(idx, 0, moved)
+  channelListRows.value = rows
+  onDragEnd()
+}
+
+function parseCsvLine(line: string): string[] {
+  const result: string[] = []
+  let cur = ''
+  let inQ = false
+  for (const ch of line) {
+    if (ch === '"') { inQ = !inQ }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = '' }
+    else cur += ch
+  }
+  result.push(cur)
+  return result
+}
+
+function exportCsv() {
+  const SQL_LABELS = ['None', 'CTCSS ENC', 'CTCSS ENC+DEC', 'DCS', 'DCS ENC+DEC']
+  const SHIFT_LABELS = ['Simplex', '+', '-']
+  const header = 'Slot,Freq_MHz,Mode,SQL_Type,CTCSS_Hz,DCS_Code,Shift,Tag'
+  const rows = channelListRows.value.map(r => [
+    r.slot,
+    (r.freq / 1_000_000).toFixed(6),
+    r.mode,
+    SQL_LABELS[r.sqlType] ?? r.sqlType,
+    r.ctcssIdx !== null ? CTCSS_TONES[r.ctcssIdx] ?? '' : '',
+    r.dcsIdx   !== null ? DCS_CODES[r.dcsIdx]     ?? '' : '',
+    SHIFT_LABELS[r.shift] ?? r.shift,
+    `"${r.tag}"`,
+  ].join(','))
+  const csv = [header, ...rows].join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = 'ftx1-channels.csv'; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function triggerImport() { csvImportRef.value?.click() }
+
+async function onImportCsv(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const text = await file.text()
+  const SQL_LABELS = ['None', 'CTCSS ENC', 'CTCSS ENC+DEC', 'DCS', 'DCS ENC+DEC']
+  const SHIFT_LABELS = ['Simplex', '+', '-']
+  const rows: EditableChannel[] = []
+  for (const line of text.split(/\r?\n/).slice(1)) {
+    if (!line.trim()) continue
+    const p = parseCsvLine(line)
+    const slot = parseInt(p[0])
+    const freq = Math.round(parseFloat(p[1]) * 1_000_000)
+    if (isNaN(slot) || slot < 1 || slot > 999 || isNaN(freq) || freq <= 0) continue
+    const sqlType = Math.max(0, SQL_LABELS.indexOf(p[3]))
+    const ctcssHz = parseFloat(p[4])
+    const ctcssIdx = !isNaN(ctcssHz) ? CTCSS_TONES.indexOf(ctcssHz) : -1
+    const dcsCode = parseInt(p[5])
+    const dcsIdx = !isNaN(dcsCode) ? DCS_CODES.indexOf(dcsCode) : -1
+    const shift = Math.max(0, SHIFT_LABELS.indexOf(p[6]))
+    rows.push({
+      slot, freq,
+      mode:     p[2] || 'USB',
+      sqlType:  sqlType >= 0 ? sqlType : 0,
+      ctcssIdx: ctcssIdx >= 0 ? ctcssIdx : null,
+      dcsIdx:   dcsIdx  >= 0 ? dcsIdx  : null,
+      shift,
+      tag:   p[7]?.substring(0, 12) ?? '',
+      dirty: true,
+    })
+  }
+  if (rows.length) channelListRows.value = rows.sort((a, b) => a.slot - b.slot)
+  if (csvImportRef.value) csvImportRef.value.value = ''
 }
 
 async function readAllFromRadio() {
@@ -1845,8 +2033,20 @@ async function writeAllToRadio() {
   chListWriting.value = true
   try {
     for (const row of channelListRows.value.filter(r => r.dirty)) {
-      await writeMemoryChannel(row.slot, { freq: row.freq, mode: row.mode, sqlType: row.sqlType, tag: row.tag || null })
-        .catch((e: any) => { lastError.value = e.message })
+      await writeMemoryChannel(row.slot, {
+        freq: row.freq, mode: row.mode, sqlType: row.sqlType,
+        shift: row.shift, tag: row.tag || null,
+      }).catch((e: any) => { lastError.value = e.message })
+      // Apply CTCSS/DCS: recall slot → set tone → store back
+      if (row.sqlType > 0 && (row.ctcssIdx !== null || row.dcsIdx !== null)) {
+        const slotStr = String(row.slot).padStart(5, '0')
+        await send('MC0' + slotStr).catch(() => {})
+        await send('MA').catch(() => {})
+        await send(`CT0${row.sqlType}`).catch(() => {})
+        if (row.ctcssIdx !== null) await send(`CN00${String(row.ctcssIdx).padStart(3, '0')}`).catch(() => {})
+        if (row.dcsIdx   !== null) await send(`CN01${String(row.dcsIdx).padStart(3, '0')}`).catch(() => {})
+        await send('AM').catch(() => {})
+      }
       row.dirty = false
     }
   } finally {
@@ -3148,8 +3348,15 @@ body {
 .chlist-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.chlist-toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
 }
 
 .chlist-scan-range {
@@ -3170,10 +3377,16 @@ body {
   margin-left: auto;
 }
 
+.csv-hidden-input {
+  display: none;
+}
+
 .chlist-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
 }
 
 .chlist-table {
@@ -3192,7 +3405,7 @@ body {
 }
 
 .chlist-table th {
-  padding: 7px 10px;
+  padding: 7px 8px;
   text-align: left;
   font-size: 10px;
   text-transform: uppercase;
@@ -3203,8 +3416,8 @@ body {
 }
 
 .chlist-table td {
-  padding: 3px 6px;
-  border-bottom: 1px solid var(--border);
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(80,81,82,.4);
   vertical-align: middle;
 }
 
@@ -3217,51 +3430,69 @@ body {
 }
 
 .row-dirty {
-  background: rgba(249, 115, 22, .06) !important;
+  background: rgba(249, 115, 22, .05) !important;
 }
 
-.row-dirty .td-slot {
+.row-dirty .cell-slot {
   color: #f97316;
 }
 
-.td-slot {
+.row-drag-over {
+  outline: 1px solid #f97316;
+  outline-offset: -1px;
+}
+
+.td-drag {
   color: var(--text-muted);
-  font-weight: 600;
-  min-width: 40px;
-  text-align: right;
-  padding-right: 12px;
+  cursor: grab;
+  padding: 0 6px;
+  font-size: 14px;
+  user-select: none;
+}
+
+.td-drag:active {
+  cursor: grabbing;
+}
+
+.td-slot-edit {
+  padding: 2px 4px;
 }
 
 .td-actions {
-  padding: 2px 8px;
+  padding: 2px 6px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 .cell-input {
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid transparent;
   border-radius: 3px;
   color: var(--text);
   font-size: 11px;
   font-family: var(--font-mono);
-  padding: 2px 5px;
-  transition: border-color .1s;
+  padding: 2px 4px;
+  transition: border-color .1s, background .1s;
+}
+
+.cell-input:hover {
+  border-color: var(--border);
+  background: var(--surface2);
 }
 
 .cell-input:focus {
   outline: none;
   border-color: #f97316;
+  background: var(--surface2);
 }
 
-.cell-freq {
-  width: 110px;
-}
-
-.cell-tag {
-  width: 110px;
-}
+.cell-slot  { width: 46px; text-align: right; }
+.cell-freq  { width: 108px; }
+.cell-tag   { width: 108px; }
 
 .cell-select {
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid transparent;
   border-radius: 3px;
   color: var(--text);
@@ -3269,26 +3500,57 @@ body {
   font-family: var(--font-mono);
   padding: 2px 4px;
   cursor: pointer;
+  transition: border-color .1s, background .1s;
+}
+
+.cell-select:hover {
+  border-color: var(--border);
+  background: var(--surface2);
 }
 
 .cell-select:focus {
   outline: none;
   border-color: #f97316;
+  background: var(--surface2);
+}
+
+.cell-select:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: .4;
+}
+
+.cell-ctcss { width: 90px; }
+.cell-dcs   { width: 74px; }
+
+.btn-del {
+  color: var(--text-muted);
+  background: none;
+  border-color: transparent;
+}
+
+.btn-del:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239,68,68,.1);
 }
 
 .chlist-empty {
-  padding: 32px;
+  padding: 40px;
   text-align: center;
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
 }
 
-.th-slot    { width: 50px; }
-.th-freq    { width: 140px; }
-.th-mode    { width: 110px; }
-.th-sql     { width: 140px; }
-.th-shift   { width: 100px; }
-.th-tag     { width: 130px; }
-.th-actions { width: 70px; }
+.th-drag    { width: 28px; }
+.th-slot    { width: 58px; }
+.th-freq    { width: 128px; }
+.th-mode    { width: 100px; }
+.th-sql     { width: 128px; }
+.th-ctcss   { width: 98px; }
+.th-dcs     { width: 72px; }
+.th-shift   { width: 86px; }
+.th-tag     { width: 120px; }
+.th-actions { width: 90px; }
 </style>

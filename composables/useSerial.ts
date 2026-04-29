@@ -125,6 +125,7 @@ export interface MemoryWriteConfig {
   freq: number
   mode: string | null
   sqlType?: number | null
+  shift?: number | null    // 0=simplex 1=plus 2=minus
   tag?: string | null
 }
 
@@ -678,8 +679,9 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   const slotStr = String(slot).padStart(5, '0')
   const freqStr = String(config.freq).padStart(9, '0')
   const modeCode = MODE_CODE[config.mode ?? ''] ?? '2'
-  const sqlCode = String(config.sqlType ?? 0)
-  const payload = slotStr + freqStr + '+0000' + '00' + modeCode + '1' + sqlCode + '001'
+  const sqlCode  = String(config.sqlType ?? 0)
+  const shiftCode = String(config.shift ?? 0)
+  const payload = slotStr + freqStr + '+0000' + '00' + modeCode + '1' + sqlCode + '00' + shiftCode
   await _sendAndWait('MW' + payload, 1500)
   if (config.tag) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
