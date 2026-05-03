@@ -5,9 +5,15 @@
       <div class="header-brand">
         <span class="brand-logo">FTX-1</span>
         <span class="brand-sub">CAT Controller</span>
+        <span class="brand-version">v1.1</span>
       </div>
 
       <div class="conn-bar">
+        <select v-if="knownPorts.length" v-model.number="selectedPortIdx" class="sel port-sel" :disabled="state.connected">
+          <option :value="-1">Pick port…</option>
+          <option v-for="(p, i) in knownPorts" :key="i" :value="i">{{ portLabel(p, i) }}</option>
+        </select>
+
         <select v-model="selectedBaud" class="sel baud-sel" :disabled="state.connected">
           <option :value="4800">4800</option>
           <option :value="9600">9600</option>
@@ -514,10 +520,10 @@
             <span class="slot-sep">–</span>
             <input type="number" v-model.number="chListScanTo" min="1" max="999" class="slot-input" />
           </div>
-          <button class="btn btn-primary btn-sm" :disabled="chListScanning || !state.connected" @click="readAllFromRadio">
+          <button class="btn btn-primary btn-sm chlist-action-btn" :disabled="chListScanning" @click="readAllFromRadio">
             {{ chListScanning ? `Reading… ${chListScanDone}/${chListScanTotal}` : 'Read from Radio' }}
           </button>
-          <button class="btn btn-sm" :disabled="chListWriting || !chListDirtyCount || !state.connected" @click="writeAllToRadio">
+          <button class="btn btn-sm chlist-action-btn" :disabled="chListWriting || (!chListDirtyCount && !chListWriting) || !state.connected" @click="writeAllToRadio">
             {{ chListWriting ? `Writing… ${chListWriteDone}/${chListWriteTotal}` : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
           <div class="chlist-toolbar-sep" />
@@ -955,8 +961,10 @@ interface CommandResult {
   ok: boolean
 }
 
-const { state, connecting, isSupported, connect, disconnect, send, sendPreset, scanMemoryChannels, writeMemoryChannel } = useSerial()
-const selectedBaud = ref(38400)
+const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel } = useSerial()
+const selectedBaud    = ref(38400)
+const knownPorts      = ref<any[]>([])
+const selectedPortIdx = ref(-1)
 const lastError = ref<string | null>(null)
 const manualCmd = ref('')
 const manualResponse = ref('')
@@ -1611,13 +1619,30 @@ async function toggleConnection() {
     }
     try {
       localStorage.setItem('cat_baud', String(selectedBaud.value))
-      await connect(selectedBaud.value)
+      const port = selectedPortIdx.value >= 0 ? knownPorts.value[selectedPortIdx.value] : undefined
+      if (port) {
+        const info = port.getInfo?.() ?? {}
+        if (info.usbVendorId != null)
+          localStorage.setItem('cat_port_vid_pid', `${info.usbVendorId}:${info.usbProductId}`)
+      }
+      await connect(selectedBaud.value, port)
+      knownPorts.value = await getKnownPorts()
     } catch (e: any) {
       if ((e as DOMException).name !== 'NotFoundError') {
         lastError.value = e.message ?? 'Connection failed'
       }
     }
   }
+}
+
+function portLabel(port: any, idx: number): string {
+  const info = port.getInfo?.() ?? {}
+  if (info.usbVendorId != null) {
+    const vid = info.usbVendorId.toString(16).padStart(4, '0')
+    const pid = info.usbProductId.toString(16).padStart(4, '0')
+    return `USB ${vid}:${pid}`
+  }
+  return `Port ${idx + 1}`
 }
 
 function loadPresets() {
@@ -2439,11 +2464,23 @@ function chSqlLabel(ch: ChannelConfig): string | null {
 
 // ----------- lifecycle -----------
 
-onMounted(() => {
+onMounted(async () => {
   const savedBaud = localStorage.getItem('cat_baud')
   if (savedBaud) selectedBaud.value = Number(savedBaud)
   loadChannels()
   loadPresets()
+  knownPorts.value = await getKnownPorts()
+  const savedVidPid = localStorage.getItem('cat_port_vid_pid')
+  if (savedVidPid && knownPorts.value.length) {
+    const idx = knownPorts.value.findIndex(p => {
+      const info = p.getInfo?.() ?? {}
+      return `${info.usbVendorId}:${info.usbProductId}` === savedVidPid
+    })
+    if (idx >= 0) selectedPortIdx.value = idx
+    else if (knownPorts.value.length === 1) selectedPortIdx.value = 0
+  } else if (knownPorts.value.length === 1) {
+    selectedPortIdx.value = 0
+  }
 })
 
 onUnmounted(async () => {
@@ -2516,6 +2553,13 @@ body {
   letter-spacing: 1px;
 }
 
+.brand-version {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  opacity: 0.6;
+}
+
 .conn-bar {
   display: flex;
   gap: 8px;
@@ -2538,6 +2582,8 @@ body {
 
 .sel:disabled { opacity: 0.5; cursor: default; }
 .baud-sel { flex: 0 0 90px; min-width: 90px; }
+.port-sel { flex: 0 0 130px; min-width: 130px; }
+.chlist-action-btn { min-width: 150px; }
 
 .btn {
   padding: 6px 14px;

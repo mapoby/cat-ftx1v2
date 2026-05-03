@@ -608,18 +608,23 @@ async function _initialSync2(): Promise<void> {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
+export async function getKnownPorts(): Promise<any[]> {
+  if (!isSupported) return []
+  return (navigator as any).serial.getPorts()
+}
+
 /**
- * Open a port chosen by the browser's native port-picker dialog and connect
- * to the FTX-1 transceiver.  Throws on user cancel (NotFoundError) or when
- * the radio ID doesn't match.
+ * Open a port and connect to the FTX-1 transceiver.  Pass a known SerialPort
+ * object to skip the browser picker, or omit to show the picker dialog.
+ * Throws on user cancel (NotFoundError) or unknown radio ID.
  */
-export async function connect(baudRate = 38400): Promise<void> {
+export async function connect(baudRate = 38400, knownPort?: any): Promise<void> {
   if (state.value.connected || connecting.value) throw new Error('Already connected or connecting')
   if (!isSupported) throw new Error('Web Serial API not supported — use Chrome or Edge.')
 
   connecting.value = true
   try {
-    const port = await navigator.serial.requestPort()
+    const port = knownPort ?? await (navigator as any).serial.requestPort()
     await port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none' })
     _port = port
     _writer = port.writable.getWriter()
@@ -743,5 +748,5 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
 
 /** Composable entry-point — returns the singleton controller. */
 export function useSerial() {
-  return { state, connecting, isSupported, connect, disconnect, send, sendPreset, readMemoryChannel, scanMemoryChannels, writeMemoryChannel }
+  return { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel }
 }
