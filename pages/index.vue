@@ -818,9 +818,20 @@
               <option value="callsign">Callsign</option>
               <option value="locator">Locator</option>
             </select>
+            <select v-if="rsgbSearchType === 'band'" v-model="rsgbSearchQuery" class="rsgb-query-input rsgb-band-sel">
+              <option value="">Select band…</option>
+              <option value="10m">10m</option>
+              <option value="6m">6m</option>
+              <option value="4m">4m</option>
+              <option value="2m">2m</option>
+              <option value="70cm">70cm</option>
+              <option value="23cm">23cm</option>
+              <option value="13cm">13cm</option>
+            </select>
             <input
+              v-else
               type="text" v-model="rsgbSearchQuery" class="rsgb-query-input"
-              :placeholder="rsgbSearchType === 'band' ? '2m or 70cm…' : rsgbSearchType === 'callsign' ? 'GB3XYZ…' : 'IO91WM…'"
+              :placeholder="rsgbSearchType === 'callsign' ? 'GB3XYZ…' : 'IO91WM or IO91…'"
               @keydown.enter="fetchRsgb"
             />
             <button class="btn btn-primary btn-sm" :disabled="rsgbLoading || !rsgbSearchQuery.trim()" @click="fetchRsgb">
@@ -830,15 +841,27 @@
 
           <div v-if="rsgbError" class="rsgb-error">{{ rsgbError }}</div>
 
-          <div v-if="rsgbResults.length && !rsgbLoading" class="rsgb-summary">
-            {{ rsgbResults.length }} entries found — {{ rsgbFiltered.length }} with Analog + Fusion
-            ({{ rsgbFiltered.length * 2 }} channels to add)
+          <div v-if="!rsgbLoading && rsgbResults.length" class="rsgb-summary">
+            {{ rsgbResults.length }} found —
+            <strong>{{ rsgbSelected.size }} selected</strong>
+            ({{ rsgbSelectedChannelCount }} channels)
+          </div>
+          <div v-else-if="!rsgbLoading && !rsgbError && rsgbSearchQuery && rsgbResults.length === 0 && !rsgbLoading" class="rsgb-no-match">
+            No entries found.
           </div>
 
-          <div v-if="rsgbFiltered.length" class="rsgb-table-wrap">
+          <div v-if="rsgbResults.length" class="rsgb-table-wrap">
             <table class="rsgb-table">
               <thead>
                 <tr>
+                  <th class="th-rsgb-chk">
+                    <input
+                      type="checkbox"
+                      class="cell-checkbox"
+                      :checked="rsgbAllEligibleSelected"
+                      @change="rsgbToggleAll(($event.target as HTMLInputElement).checked)"
+                    />
+                  </th>
                   <th>Callsign</th>
                   <th>Town</th>
                   <th>Locator</th>
@@ -850,7 +873,19 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="e in rsgbFiltered" :key="e.id">
+                <tr
+                  v-for="e in rsgbResults" :key="e.id"
+                  :class="{ 'rsgb-row-ineligible': !e.modeCodes.includes('A') && !e.modeCodes.includes('F') }"
+                >
+                  <td class="td-rsgb-chk">
+                    <input
+                      type="checkbox"
+                      class="cell-checkbox"
+                      :checked="rsgbSelected.has(e.id)"
+                      :disabled="!e.modeCodes.includes('A') && !e.modeCodes.includes('F')"
+                      @change="rsgbToggleEntry(e.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                  </td>
                   <td>{{ e.repeater }}</td>
                   <td>{{ e.town }}</td>
                   <td>{{ e.locator }}</td>
@@ -863,11 +898,8 @@
               </tbody>
             </table>
           </div>
-          <div v-else-if="rsgbResults.length && !rsgbLoading" class="rsgb-no-match">
-            No Analog+Fusion entries in results.
-          </div>
 
-          <div v-if="rsgbFiltered.length" class="rsgb-import-row">
+          <div v-if="rsgbResults.length" class="rsgb-import-row">
             <label class="rsgb-import-label">Add from slot:</label>
             <input type="number" v-model.number="rsgbAddFromSlot" min="1" max="999" class="slot-input" />
             <label class="rsgb-import-check">
@@ -876,8 +908,8 @@
             </label>
             <div class="rsgb-import-spacer" />
             <button class="btn btn-sm" @click="rsgbDialog = false">Cancel</button>
-            <button class="btn btn-primary btn-sm" @click="importRsgbChannels">
-              Add {{ rsgbFiltered.length * 2 }} channels
+            <button class="btn btn-primary btn-sm" :disabled="!rsgbSelectedChannelCount" @click="importRsgbChannels">
+              Add {{ rsgbSelectedChannelCount }} channels
             </button>
           </div>
 
@@ -889,7 +921,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useSerial, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
 import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
@@ -2010,8 +2042,16 @@ const sortedRadioChannels = computed(() =>
 )
 
 const chListDirtyCount = computed(() => channelListRows.value.filter(r => r.dirty).length)
-const rsgbFiltered     = computed(() =>
-  rsgbResults.value.filter(e => e.modeCodes.includes('A') && e.modeCodes.includes('F'))
+
+const rsgbSelected             = ref<Set<number>>(new Set())
+const rsgbAllEligibleSelected  = computed(() => {
+  const eligible = rsgbResults.value.filter(e => e.modeCodes.includes('A') || e.modeCodes.includes('F'))
+  return eligible.length > 0 && eligible.every(e => rsgbSelected.value.has(e.id))
+})
+const rsgbSelectedChannelCount = computed(() =>
+  rsgbResults.value
+    .filter(e => rsgbSelected.value.has(e.id))
+    .reduce((n, e) => n + (e.modeCodes.includes('A') ? 1 : 0) + (e.modeCodes.includes('F') ? 1 : 0), 0)
 )
 
 function syncChannelListFromState() {
@@ -2240,12 +2280,37 @@ async function writeAllToRadio() {
   }
 }
 
+watch(rsgbSearchType, () => {
+  rsgbSearchQuery.value = ''
+  rsgbResults.value     = []
+  rsgbSelected.value    = new Set()
+  rsgbError.value       = null
+})
+
+function rsgbToggleAll(checked: boolean) {
+  const sel = new Set<number>()
+  if (checked) {
+    for (const e of rsgbResults.value) {
+      if (e.modeCodes.includes('A') || e.modeCodes.includes('F')) sel.add(e.id)
+    }
+  }
+  rsgbSelected.value = sel
+}
+
+function rsgbToggleEntry(id: number, checked: boolean) {
+  const sel = new Set(rsgbSelected.value)
+  if (checked) sel.add(id)
+  else sel.delete(id)
+  rsgbSelected.value = sel
+}
+
 async function fetchRsgb() {
   const q = rsgbSearchQuery.value.trim()
   if (!q) return
-  rsgbLoading.value = true
-  rsgbError.value   = null
-  rsgbResults.value = []
+  rsgbLoading.value  = true
+  rsgbError.value    = null
+  rsgbResults.value  = []
+  rsgbSelected.value = new Set()
   try {
     const base = 'https://api-beta.rsgb.online'
     const path = rsgbSearchType.value === 'band'
@@ -2256,9 +2321,13 @@ async function fetchRsgb() {
     const res = await fetch(base + path)
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
     const json = await res.json()
-    let raw = json?.data ?? json
-    if (!Array.isArray(raw)) raw = raw ? [raw] : []
-    rsgbResults.value = raw as RsgbEntry[]
+    const entries: RsgbEntry[] = Array.isArray(json?.data) ? json.data : []
+    rsgbResults.value = entries
+    const sel = new Set<number>()
+    for (const e of entries) {
+      if (e.modeCodes.includes('A') || e.modeCodes.includes('F')) sel.add(e.id)
+    }
+    rsgbSelected.value = sel
   } catch (e: any) {
     rsgbError.value = String(e.message ?? 'Fetch failed')
   } finally {
@@ -2267,12 +2336,16 @@ async function fetchRsgb() {
 }
 
 function importRsgbChannels() {
+  const selectedEntries = rsgbResults.value.filter(e => rsgbSelected.value.has(e.id))
   const existingSlots = new Set(channelListRows.value.map(r => r.slot))
   let nextSlot = rsgbAddFromSlot.value
   const newRows: EditableChannel[] = []
 
-  for (const entry of rsgbFiltered.value) {
-    for (const isAnalog of [true, false]) {
+  for (const entry of selectedEntries) {
+    const entryModes: boolean[] = []
+    if (entry.modeCodes.includes('A')) entryModes.push(true)
+    if (entry.modeCodes.includes('F')) entryModes.push(false)
+    for (const isAnalog of entryModes) {
       if (!rsgbOverwrite.value) {
         while (existingSlots.has(nextSlot) && nextSlot <= 999) nextSlot++
       }
@@ -3992,5 +4065,24 @@ body {
 
 .rsgb-import-spacer {
   flex: 1;
+}
+
+.rsgb-band-sel {
+  flex: 1;
+}
+
+.th-rsgb-chk,
+.td-rsgb-chk {
+  width: 30px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.rsgb-row-ineligible {
+  opacity: .4;
+}
+
+.rsgb-summary strong {
+  color: var(--text);
 }
 </style>
