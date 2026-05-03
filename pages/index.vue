@@ -515,10 +515,10 @@
             <input type="number" v-model.number="chListScanTo" min="1" max="999" class="slot-input" />
           </div>
           <button class="btn btn-primary btn-sm" :disabled="chListScanning || !state.connected" @click="readAllFromRadio">
-            {{ chListScanning ? 'Reading…' : 'Read from Radio' }}
+            {{ chListScanning ? `Reading… ${chListScanDone}/${chListScanTotal}` : 'Read from Radio' }}
           </button>
           <button class="btn btn-sm" :disabled="chListWriting || !chListDirtyCount || !state.connected" @click="writeAllToRadio">
-            {{ chListWriting ? 'Writing…' : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
+            {{ chListWriting ? `Writing… ${chListWriteDone}/${chListWriteTotal}` : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
@@ -963,6 +963,10 @@ interface EditableChannel {
 const channelListRows = ref<EditableChannel[]>([])
 const chListScanning  = ref(false)
 const chListWriting   = ref(false)
+const chListScanDone  = ref(0)
+const chListScanTotal = ref(0)
+const chListWriteDone = ref(0)
+const chListWriteTotal = ref(0)
 const chListScanFrom  = ref(1)
 const chListScanTo    = ref(999)
 const dragSrcIdx      = ref<number | null>(null)
@@ -2188,8 +2192,15 @@ async function onImportCsv(e: Event) {
 async function readAllFromRadio() {
   if (chListScanning.value) return
   chListScanning.value = true
+  const from = chListScanFrom.value
+  const to   = chListScanTo.value
+  chListScanDone.value  = 0
+  chListScanTotal.value = to - from + 1
   try {
-    await scanMemoryChannels(chListScanFrom.value, chListScanTo.value)
+    for (let i = from; i <= to; i++) {
+      await readMemoryChannel(i)
+      chListScanDone.value = i - from + 1
+    }
     syncChannelListFromState()
   } finally {
     chListScanning.value = false
@@ -2199,8 +2210,11 @@ async function readAllFromRadio() {
 async function writeAllToRadio() {
   if (chListWriting.value) return
   chListWriting.value = true
+  const dirty = channelListRows.value.filter(r => r.dirty)
+  chListWriteDone.value  = 0
+  chListWriteTotal.value = dirty.length
   try {
-    for (const row of channelListRows.value.filter(r => r.dirty)) {
+    for (const row of dirty) {
       await writeMemoryChannel(row.slot, {
         freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
         mode: row.mode, sqlType: row.sqlType,
@@ -2219,6 +2233,7 @@ async function writeAllToRadio() {
         await send('AM').catch(() => {})
       }
       row.dirty = false
+      chListWriteDone.value++
     }
   } finally {
     chListWriting.value = false
