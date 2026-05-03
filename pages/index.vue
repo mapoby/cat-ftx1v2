@@ -522,6 +522,7 @@
           </button>
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
+          <button class="btn btn-sm" @click="rsgbDialog = true">+ Add from RSGB</button>
           <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length">Export CSV</button>
           <button class="btn btn-sm" @click="triggerImport">Import CSV</button>
           <input ref="csvImportRef" type="file" accept=".csv,text/csv" class="csv-hidden-input" @change="onImportCsv" />
@@ -800,6 +801,90 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- ── RSGB repeater import dialog ── -->
+    <Teleport to="body">
+      <div v-if="rsgbDialog" class="rsgb-backdrop" @click.self="rsgbDialog = false">
+        <div class="rsgb-modal" role="dialog" aria-modal="true" aria-label="Add from RSGB">
+
+          <div class="rsgb-header">
+            <span class="rsgb-title">Add from RSGB Repeater List</span>
+            <button class="tone-modal-close" @click="rsgbDialog = false" aria-label="Close">✕</button>
+          </div>
+
+          <div class="rsgb-search-row">
+            <select v-model="rsgbSearchType" class="sel rsgb-type-sel">
+              <option value="band">Band</option>
+              <option value="callsign">Callsign</option>
+              <option value="locator">Locator</option>
+            </select>
+            <input
+              type="text" v-model="rsgbSearchQuery" class="rsgb-query-input"
+              :placeholder="rsgbSearchType === 'band' ? '2m or 70cm…' : rsgbSearchType === 'callsign' ? 'GB3XYZ…' : 'IO91WM…'"
+              @keydown.enter="fetchRsgb"
+            />
+            <button class="btn btn-primary btn-sm" :disabled="rsgbLoading || !rsgbSearchQuery.trim()" @click="fetchRsgb">
+              {{ rsgbLoading ? 'Searching…' : 'Search' }}
+            </button>
+          </div>
+
+          <div v-if="rsgbError" class="rsgb-error">{{ rsgbError }}</div>
+
+          <div v-if="rsgbResults.length && !rsgbLoading" class="rsgb-summary">
+            {{ rsgbResults.length }} entries found — {{ rsgbFiltered.length }} with Analog + Fusion
+            ({{ rsgbFiltered.length * 2 }} channels to add)
+          </div>
+
+          <div v-if="rsgbFiltered.length" class="rsgb-table-wrap">
+            <table class="rsgb-table">
+              <thead>
+                <tr>
+                  <th>Callsign</th>
+                  <th>Town</th>
+                  <th>Locator</th>
+                  <th>Band</th>
+                  <th>Listen (MHz)</th>
+                  <th>TX to (MHz)</th>
+                  <th>CTCSS</th>
+                  <th>Modes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="e in rsgbFiltered" :key="e.id">
+                  <td>{{ e.repeater }}</td>
+                  <td>{{ e.town }}</td>
+                  <td>{{ e.locator }}</td>
+                  <td>{{ e.band }}</td>
+                  <td>{{ (e.tx / 1_000_000).toFixed(4) }}</td>
+                  <td>{{ (e.rx / 1_000_000).toFixed(4) }}</td>
+                  <td>{{ e.ctcss > 0 ? e.ctcss.toFixed(1) : '—' }}</td>
+                  <td>{{ e.modeCodes.join(', ') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else-if="rsgbResults.length && !rsgbLoading" class="rsgb-no-match">
+            No Analog+Fusion entries in results.
+          </div>
+
+          <div v-if="rsgbFiltered.length" class="rsgb-import-row">
+            <label class="rsgb-import-label">Add from slot:</label>
+            <input type="number" v-model.number="rsgbAddFromSlot" min="1" max="999" class="slot-input" />
+            <label class="rsgb-import-check">
+              <input type="checkbox" v-model="rsgbOverwrite" />
+              Overwrite existing
+            </label>
+            <div class="rsgb-import-spacer" />
+            <button class="btn btn-sm" @click="rsgbDialog = false">Cancel</button>
+            <button class="btn btn-primary btn-sm" @click="importRsgbChannels">
+              Add {{ rsgbFiltered.length * 2 }} channels
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -883,6 +968,30 @@ const chListScanTo    = ref(999)
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
 const csvImportRef    = ref<HTMLInputElement | null>(null)
+
+interface RsgbEntry {
+  id: number
+  type: string
+  status: string
+  keeperCallsign: string
+  town: string
+  modeCodes: string[]
+  tx: number
+  rx: number
+  ctcss: number
+  txbw: number
+  band: string
+  locator: string
+  repeater: string
+}
+const rsgbDialog      = ref(false)
+const rsgbSearchType  = ref<'band' | 'callsign' | 'locator'>('band')
+const rsgbSearchQuery = ref('')
+const rsgbResults     = ref<RsgbEntry[]>([])
+const rsgbLoading     = ref(false)
+const rsgbError       = ref<string | null>(null)
+const rsgbAddFromSlot = ref(1)
+const rsgbOverwrite   = ref(false)
 
 function loadChannels() {
   try {
@@ -1897,6 +2006,9 @@ const sortedRadioChannels = computed(() =>
 )
 
 const chListDirtyCount = computed(() => channelListRows.value.filter(r => r.dirty).length)
+const rsgbFiltered     = computed(() =>
+  rsgbResults.value.filter(e => e.modeCodes.includes('A') && e.modeCodes.includes('F'))
+)
 
 function syncChannelListFromState() {
   channelListRows.value = sortedRadioChannels.value.map(ch => ({
@@ -2111,6 +2223,84 @@ async function writeAllToRadio() {
   } finally {
     chListWriting.value = false
   }
+}
+
+async function fetchRsgb() {
+  const q = rsgbSearchQuery.value.trim()
+  if (!q) return
+  rsgbLoading.value = true
+  rsgbError.value   = null
+  rsgbResults.value = []
+  try {
+    const base = 'https://api-beta.rsgb.online'
+    const path = rsgbSearchType.value === 'band'
+      ? `/band/${encodeURIComponent(q.toLowerCase())}`
+      : rsgbSearchType.value === 'callsign'
+      ? `/callsign/${encodeURIComponent(q.toLowerCase())}`
+      : `/locator/${encodeURIComponent(q.toLowerCase())}`
+    const res = await fetch(base + path)
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    const json = await res.json()
+    let raw = json?.data ?? json
+    if (!Array.isArray(raw)) raw = raw ? [raw] : []
+    rsgbResults.value = raw as RsgbEntry[]
+  } catch (e: any) {
+    rsgbError.value = String(e.message ?? 'Fetch failed')
+  } finally {
+    rsgbLoading.value = false
+  }
+}
+
+function importRsgbChannels() {
+  const existingSlots = new Set(channelListRows.value.map(r => r.slot))
+  let nextSlot = rsgbAddFromSlot.value
+  const newRows: EditableChannel[] = []
+
+  for (const entry of rsgbFiltered.value) {
+    for (const isAnalog of [true, false]) {
+      if (!rsgbOverwrite.value) {
+        while (existingSlots.has(nextSlot) && nextSlot <= 999) nextSlot++
+      }
+      if (nextSlot > 999) break
+
+      const modeLabel  = isAnalog ? (entry.txbw <= 12.5 ? 'FM-N' : 'FM') : 'C4FM-DN'
+      const ctcssMatch = isAnalog && entry.ctcss > 0 ? CTCSS_TONES.indexOf(entry.ctcss) : -1
+      const ctcssIdx   = ctcssMatch >= 0 ? ctcssMatch : null
+      const sqlType    = isAnalog && ctcssIdx !== null ? 2 : 0
+      const town       = entry.town.substring(0, 6).padEnd(6, ' ')
+      const call       = entry.repeater.substring(0, 5)
+      const tag        = (town + ' ' + call).substring(0, 12)
+
+      newRows.push({
+        slot:       nextSlot,
+        freq:       entry.tx,
+        txFreq:     entry.rx !== entry.tx ? entry.rx : null,
+        splitMem:   entry.rx !== entry.tx,
+        mode:       modeLabel,
+        sqlType:    isAnalog ? sqlType : 0,
+        ctcssIdx:   isAnalog ? ctcssIdx : null,
+        dcsIdx:     null,
+        clarDir:    '+',
+        clarOffset: 0,
+        rxClar:     false,
+        txClar:     false,
+        shift:      0,
+        tag,
+        dirty:      true,
+      })
+      existingSlots.add(nextSlot)
+      nextSlot++
+    }
+  }
+
+  if (rsgbOverwrite.value) {
+    const rowMap = new Map(channelListRows.value.map(r => [r.slot, r]))
+    for (const nr of newRows) rowMap.set(nr.slot, nr)
+    channelListRows.value = Array.from(rowMap.values()).sort((a, b) => a.slot - b.slot)
+  } else {
+    channelListRows.value = [...channelListRows.value, ...newRows].sort((a, b) => a.slot - b.slot)
+  }
+  rsgbDialog.value = false
 }
 
 async function scanRadioMemory() {
@@ -3623,5 +3813,169 @@ body {
   width: 14px;
   height: 14px;
   accent-color: #f97316;
+}
+
+/* ── RSGB dialog ── */
+.rsgb-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rsgb-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(860px, 95vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.rsgb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.rsgb-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.rsgb-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rsgb-type-sel {
+  width: 110px;
+}
+
+.rsgb-query-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 5px 8px;
+}
+
+.rsgb-query-input:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.rsgb-error {
+  font-size: 11px;
+  color: #ef4444;
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 4px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+.rsgb-summary {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.rsgb-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  min-height: 0;
+}
+
+.rsgb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.rsgb-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  z-index: 1;
+}
+
+.rsgb-table th {
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.rsgb-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(80,81,82,.4);
+}
+
+.rsgb-table tbody tr:hover {
+  background: rgba(255,255,255,.03);
+}
+
+.rsgb-no-match {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  flex-shrink: 0;
+}
+
+.rsgb-import-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.rsgb-import-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.rsgb-import-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rsgb-import-check input[type="checkbox"] {
+  accent-color: #f97316;
+  cursor: pointer;
+}
+
+.rsgb-import-spacer {
+  flex: 1;
 }
 </style>

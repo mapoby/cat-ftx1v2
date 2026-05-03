@@ -729,15 +729,15 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   const rxClar    = config.rxClar ? '1' : '0'
   const txClar    = config.txClar ? '1' : '0'
   const payload   = slotStr + freqStr + clarDir + clarOff + rxClar + txClar + modeCode + '1' + sqlCode + '00' + shiftCode
-  await _sendAndWait('MW' + payload, 1500)
+  await send('MW' + payload)
   if (config.txFreq != null) {
     const txFreqStr = String(config.txFreq).padStart(9, '0')
     const splitBit  = config.splitMem ? '1' : '0'
-    await _sendAndWait('MZ' + slotStr + splitBit + txFreqStr, 1500)
+    await send('MZ' + slotStr + splitBit + txFreqStr)
   }
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
-    await _sendAndWait('MT' + slotStr + tag, 1500)
+    await send('MT' + slotStr + tag)
   }
 }
 
