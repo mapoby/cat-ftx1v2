@@ -114,18 +114,30 @@ export interface CommandResult {
 
 export interface RadioChannel {
   slot: number
-  freq: number
+  freq: number          // RX frequency Hz
+  txFreq: number | null // TX frequency Hz (from MZ); null = same as RX
+  splitMem: boolean     // split memory enabled (MZ P2)
   mode: string | null
   sqlType: number | null
-  shift: number       // 0=simplex 1=plus 2=minus
+  clarDir: string | null  // '+' or '-'
+  clarOffset: number | null // Hz
+  rxClar: boolean
+  txClar: boolean
+  shift: number         // 0=simplex 1=plus 2=minus
   tag: string | null
 }
 
 export interface MemoryWriteConfig {
   freq: number
+  txFreq?: number | null
+  splitMem?: boolean
   mode: string | null
   sqlType?: number | null
-  shift?: number | null    // 0=simplex 1=plus 2=minus
+  clarDir?: string | null
+  clarOffset?: number | null
+  rxClar?: boolean
+  txClar?: boolean
+  shift?: number | null
   tag?: string | null
 }
 
@@ -474,18 +486,46 @@ function _parseResponse(cmd: string, params: string, sourceCmd: string | null = 
 
     case 'MR':
       if (params.length >= 27) {
-        const slot = parseInt(params.substring(0, 5), 10)
-        const freq = parseInt(params.substring(5, 14), 10)
-        const mode = MODE_MAP[params[21]?.toUpperCase()] ?? null
-        const sqlType = parseInt(params[23], 10)
-        const shift = parseInt(params[26], 10)
+        const slot     = parseInt(params.substring(0, 5), 10)
+        const freq     = parseInt(params.substring(5, 14), 10)
+        const clarDir  = params[14] === '+' || params[14] === '-' ? params[14] : null
+        const clarOffset = parseInt(params.substring(15, 19), 10)
+        const rxClar   = params[19] === '1'
+        const txClar   = params[20] === '1'
+        const mode     = MODE_MAP[params[21]?.toUpperCase()] ?? null
+        const sqlType  = parseInt(params[23], 10)
+        const shift    = parseInt(params[26], 10)
         if (slot > 0 && freq > 0) {
           const channels = { ...s.radioChannels }
+          const prev = s.radioChannels[slot]
           channels[slot] = {
-            slot, freq, mode,
-            sqlType: isNaN(sqlType) ? null : sqlType,
+            slot, freq,
+            txFreq:   prev?.txFreq ?? null,
+            splitMem: prev?.splitMem ?? false,
+            mode,
+            sqlType:    isNaN(sqlType) ? null : sqlType,
+            clarDir,
+            clarOffset: isNaN(clarOffset) ? null : clarOffset,
+            rxClar, txClar,
             shift: isNaN(shift) ? 0 : shift,
-            tag: s.radioChannels[slot]?.tag ?? null,
+            tag: prev?.tag ?? null,
+          }
+          ch.radioChannels = channels
+        }
+      }
+      break
+
+    case 'MZ':
+      if (params.length >= 15) {
+        const slot     = parseInt(params.substring(0, 5), 10)
+        const splitMem = params[5] === '1'
+        const txFreq   = parseInt(params.substring(6, 15), 10)
+        if (slot > 0 && s.radioChannels[slot]) {
+          const channels = { ...s.radioChannels }
+          channels[slot] = {
+            ...channels[slot],
+            splitMem,
+            txFreq: splitMem && txFreq > 0 ? txFreq : null,
           }
           ch.radioChannels = channels
         }
@@ -495,7 +535,7 @@ function _parseResponse(cmd: string, params: string, sourceCmd: string | null = 
     case 'MT':
       if (params.length >= 5) {
         const slot = parseInt(params.substring(0, 5), 10)
-        const tag = params.substring(5, 17).trimEnd()
+        const tag  = params.substring(5, 17).trimEnd()
         if (slot > 0 && s.radioChannels[slot]) {
           const channels = { ...s.radioChannels }
           channels[slot] = { ...channels[slot], tag }
@@ -662,6 +702,9 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
   const slotStr = String(slot).padStart(5, '0')
   try {
     await _sendAndWait('MR' + slotStr, 1500)
+    if (state.value.radioChannels[slot]) {
+      try { await _sendAndWait('MZ' + slotStr, 1000) } catch { /* no split data */ }
+    }
     return state.value.radioChannels[slot] ?? null
   } catch {
     return null
@@ -676,14 +719,23 @@ export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
 }
 
 export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig): Promise<void> {
-  const slotStr = String(slot).padStart(5, '0')
-  const freqStr = String(config.freq).padStart(9, '0')
-  const modeCode = MODE_CODE[config.mode ?? ''] ?? '2'
-  const sqlCode  = String(config.sqlType ?? 0)
+  const slotStr   = String(slot).padStart(5, '0')
+  const freqStr   = String(config.freq).padStart(9, '0')
+  const modeCode  = MODE_CODE[config.mode ?? ''] ?? '2'
+  const sqlCode   = String(config.sqlType ?? 0)
   const shiftCode = String(config.shift ?? 0)
-  const payload = slotStr + freqStr + '+0000' + '00' + modeCode + '1' + sqlCode + '00' + shiftCode
+  const clarDir   = config.clarDir ?? '+'
+  const clarOff   = String(config.clarOffset ?? 0).padStart(4, '0')
+  const rxClar    = config.rxClar ? '1' : '0'
+  const txClar    = config.txClar ? '1' : '0'
+  const payload   = slotStr + freqStr + clarDir + clarOff + rxClar + txClar + modeCode + '1' + sqlCode + '00' + shiftCode
   await _sendAndWait('MW' + payload, 1500)
-  if (config.tag) {
+  if (config.txFreq != null) {
+    const txFreqStr = String(config.txFreq).padStart(9, '0')
+    const splitBit  = config.splitMem ? '1' : '0'
+    await _sendAndWait('MZ' + slotStr + splitBit + txFreqStr, 1500)
+  }
+  if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
     await _sendAndWait('MT' + slotStr + tag, 1500)
   }

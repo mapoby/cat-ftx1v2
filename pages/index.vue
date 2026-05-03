@@ -535,7 +535,9 @@
               <tr>
                 <th class="th-drag"></th>
                 <th class="th-slot">Slot</th>
-                <th class="th-freq">Frequency (MHz)</th>
+                <th class="th-freq">RX Freq (MHz)</th>
+                <th class="th-freq">TX Freq (MHz)</th>
+                <th class="th-split">Split</th>
                 <th class="th-mode">Mode</th>
                 <th class="th-sql">SQL Type</th>
                 <th class="th-ctcss">CTCSS (Hz)</th>
@@ -575,6 +577,21 @@
                   />
                 </td>
                 <td>
+                  <input
+                    type="number" step="0.001" class="cell-input cell-freq"
+                    :value="row.txFreq !== null ? (row.txFreq / 1_000_000).toFixed(6) : ''"
+                    :placeholder="(row.freq / 1_000_000).toFixed(3)"
+                    @change="updateRowTxFreq(row, ($event.target as HTMLInputElement).value)"
+                  />
+                </td>
+                <td class="td-split">
+                  <input
+                    type="checkbox" class="cell-checkbox"
+                    :checked="row.splitMem"
+                    @change="row.splitMem = ($event.target as HTMLInputElement).checked; row.dirty = true"
+                  />
+                </td>
+                <td>
                   <select class="cell-select" v-model="row.mode" @change="row.dirty = true">
                     <option v-for="m in MODES" :key="m.code" :value="m.label">{{ m.label }}</option>
                   </select>
@@ -582,10 +599,11 @@
                 <td>
                   <select class="cell-select" v-model.number="row.sqlType" @change="row.dirty = true">
                     <option :value="0">None</option>
-                    <option :value="1">CTCSS ENC</option>
-                    <option :value="2">CTCSS ENC+DEC</option>
+                    <option :value="1">CTCSS ENC/DEC</option>
+                    <option :value="2">CTCSS ENC</option>
                     <option :value="3">DCS</option>
-                    <option :value="4">DCS ENC+DEC</option>
+                    <option :value="4">PR FREQ</option>
+                    <option :value="5">REV TONE</option>
                   </select>
                 </td>
                 <td>
@@ -602,7 +620,7 @@
                 <td>
                   <select
                     class="cell-select cell-dcs"
-                    :disabled="row.sqlType < 3"
+                    :disabled="row.sqlType < 3 || row.sqlType > 4"
                     v-model.number="row.dcsIdx"
                     @change="row.dirty = true"
                   >
@@ -842,11 +860,17 @@ const radioMemWriteSlots = ref<Record<string, number>>({})
 
 interface EditableChannel {
   slot: number
-  freq: number
+  freq: number          // RX frequency Hz
+  txFreq: number | null // TX frequency Hz; null = same as RX
+  splitMem: boolean
   mode: string
   sqlType: number
   ctcssIdx: number | null
   dcsIdx: number | null
+  clarDir: string       // '+' or '-'
+  clarOffset: number    // Hz 0-9990
+  rxClar: boolean
+  txClar: boolean
   shift: number
   tag: string
   dirty: boolean
@@ -1876,21 +1900,33 @@ const chListDirtyCount = computed(() => channelListRows.value.filter(r => r.dirt
 
 function syncChannelListFromState() {
   channelListRows.value = sortedRadioChannels.value.map(ch => ({
-    slot:     ch.slot,
-    freq:     ch.freq,
-    mode:     ch.mode ?? 'USB',
-    sqlType:  ch.sqlType ?? 0,
-    ctcssIdx: null,
-    dcsIdx:   null,
-    shift:    ch.shift,
-    tag:      ch.tag ?? '',
-    dirty:    false,
+    slot:       ch.slot,
+    freq:       ch.freq,
+    txFreq:     ch.txFreq ?? null,
+    splitMem:   ch.splitMem,
+    mode:       ch.mode ?? 'USB',
+    sqlType:    ch.sqlType ?? 0,
+    ctcssIdx:   null,
+    dcsIdx:     null,
+    clarDir:    ch.clarDir ?? '+',
+    clarOffset: ch.clarOffset ?? 0,
+    rxClar:     ch.rxClar,
+    txClar:     ch.txClar,
+    shift:      ch.shift,
+    tag:        ch.tag ?? '',
+    dirty:      false,
   }))
 }
 
 function updateRowFreq(row: EditableChannel, mhzStr: string) {
   const hz = Math.round(parseFloat(mhzStr) * 1_000_000)
   if (!isNaN(hz) && hz > 0) { row.freq = hz; row.dirty = true }
+}
+
+function updateRowTxFreq(row: EditableChannel, mhzStr: string) {
+  if (!mhzStr.trim()) { row.txFreq = null; row.dirty = true; return }
+  const hz = Math.round(parseFloat(mhzStr) * 1_000_000)
+  if (!isNaN(hz) && hz > 0) { row.txFreq = hz; row.splitMem = true; row.dirty = true }
 }
 
 function updateRowSlot(row: EditableChannel, newSlotStr: string) {
@@ -1904,15 +1940,21 @@ function updateRowSlot(row: EditableChannel, newSlotStr: string) {
 function addNewChannel() {
   const maxSlot = channelListRows.value.reduce((m, r) => Math.max(m, r.slot), 0)
   channelListRows.value = [...channelListRows.value, {
-    slot: Math.min(maxSlot + 1, 999),
-    freq: 145_500_000,
-    mode: 'FM',
-    sqlType: 0,
-    ctcssIdx: null,
-    dcsIdx: null,
-    shift: 0,
-    tag: '',
-    dirty: true,
+    slot:       Math.min(maxSlot + 1, 999),
+    freq:       145_500_000,
+    txFreq:     null,
+    splitMem:   false,
+    mode:       'FM',
+    sqlType:    0,
+    ctcssIdx:   null,
+    dcsIdx:     null,
+    clarDir:    '+',
+    clarOffset: 0,
+    rxClar:     false,
+    txClar:     false,
+    shift:      0,
+    tag:        '',
+    dirty:      true,
   }]
 }
 
@@ -1960,17 +2002,23 @@ function parseCsvLine(line: string): string[] {
 }
 
 function exportCsv() {
-  const SQL_LABELS = ['None', 'CTCSS ENC', 'CTCSS ENC+DEC', 'DCS', 'DCS ENC+DEC']
+  const SQL_LABELS   = ['None', 'CTCSS ENC/DEC', 'CTCSS ENC', 'DCS', 'PR FREQ', 'REV TONE']
   const SHIFT_LABELS = ['Simplex', '+', '-']
-  const header = 'Slot,Freq_MHz,Mode,SQL_Type,CTCSS_Hz,DCS_Code,Shift,Tag'
+  const header = 'Slot,RxFreq_MHz,TxFreq_MHz,Split,Mode,SQL_Type,CTCSS_Hz,DCS_Code,Shift,ClarDir,ClarOffset_Hz,RxClar,TxClar,Tag'
   const rows = channelListRows.value.map(r => [
     r.slot,
     (r.freq / 1_000_000).toFixed(6),
+    r.txFreq !== null ? (r.txFreq / 1_000_000).toFixed(6) : '',
+    r.splitMem ? '1' : '0',
     r.mode,
     SQL_LABELS[r.sqlType] ?? r.sqlType,
     r.ctcssIdx !== null ? CTCSS_TONES[r.ctcssIdx] ?? '' : '',
     r.dcsIdx   !== null ? DCS_CODES[r.dcsIdx]     ?? '' : '',
     SHIFT_LABELS[r.shift] ?? r.shift,
+    r.clarDir,
+    r.clarOffset,
+    r.rxClar ? '1' : '0',
+    r.txClar ? '1' : '0',
     `"${r.tag}"`,
   ].join(','))
   const csv = [header, ...rows].join('\r\n')
@@ -1987,29 +2035,37 @@ async function onImportCsv(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   const text = await file.text()
-  const SQL_LABELS = ['None', 'CTCSS ENC', 'CTCSS ENC+DEC', 'DCS', 'DCS ENC+DEC']
+  const SQL_LABELS   = ['None', 'CTCSS ENC/DEC', 'CTCSS ENC', 'DCS', 'PR FREQ', 'REV TONE']
   const SHIFT_LABELS = ['Simplex', '+', '-']
   const rows: EditableChannel[] = []
   for (const line of text.split(/\r?\n/).slice(1)) {
     if (!line.trim()) continue
     const p = parseCsvLine(line)
-    const slot = parseInt(p[0])
-    const freq = Math.round(parseFloat(p[1]) * 1_000_000)
+    const slot  = parseInt(p[0])
+    const freq  = Math.round(parseFloat(p[1]) * 1_000_000)
     if (isNaN(slot) || slot < 1 || slot > 999 || isNaN(freq) || freq <= 0) continue
-    const sqlType = Math.max(0, SQL_LABELS.indexOf(p[3]))
-    const ctcssHz = parseFloat(p[4])
-    const ctcssIdx = !isNaN(ctcssHz) ? CTCSS_TONES.indexOf(ctcssHz) : -1
-    const dcsCode = parseInt(p[5])
-    const dcsIdx = !isNaN(dcsCode) ? DCS_CODES.indexOf(dcsCode) : -1
-    const shift = Math.max(0, SHIFT_LABELS.indexOf(p[6]))
+    const txFreqRaw = parseFloat(p[2])
+    const txFreq    = !isNaN(txFreqRaw) && txFreqRaw > 0 ? Math.round(txFreqRaw * 1_000_000) : null
+    const splitMem  = p[3] === '1'
+    const sqlType   = SQL_LABELS.indexOf(p[5])
+    const ctcssHz   = parseFloat(p[6])
+    const ctcssIdx  = !isNaN(ctcssHz) ? CTCSS_TONES.indexOf(ctcssHz) : -1
+    const dcsCode   = parseInt(p[7])
+    const dcsIdx    = !isNaN(dcsCode) ? DCS_CODES.indexOf(dcsCode) : -1
+    const shift     = Math.max(0, SHIFT_LABELS.indexOf(p[8]))
+    const clarDir   = p[9] === '-' ? '-' : '+'
+    const clarOffset = parseInt(p[10]) || 0
     rows.push({
-      slot, freq,
-      mode:     p[2] || 'USB',
-      sqlType:  sqlType >= 0 ? sqlType : 0,
-      ctcssIdx: ctcssIdx >= 0 ? ctcssIdx : null,
-      dcsIdx:   dcsIdx  >= 0 ? dcsIdx  : null,
+      slot, freq, txFreq, splitMem,
+      mode:       p[4] || 'USB',
+      sqlType:    sqlType >= 0 ? sqlType : 0,
+      ctcssIdx:   ctcssIdx >= 0 ? ctcssIdx : null,
+      dcsIdx:     dcsIdx   >= 0 ? dcsIdx   : null,
+      clarDir, clarOffset,
+      rxClar: p[11] === '1',
+      txClar: p[12] === '1',
       shift,
-      tag:   p[7]?.substring(0, 12) ?? '',
+      tag:   p[13]?.substring(0, 12) ?? '',
       dirty: true,
     })
   }
@@ -2034,7 +2090,10 @@ async function writeAllToRadio() {
   try {
     for (const row of channelListRows.value.filter(r => r.dirty)) {
       await writeMemoryChannel(row.slot, {
-        freq: row.freq, mode: row.mode, sqlType: row.sqlType,
+        freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
+        mode: row.mode, sqlType: row.sqlType,
+        clarDir: row.clarDir, clarOffset: row.clarOffset,
+        rxClar: row.rxClar, txClar: row.txClar,
         shift: row.shift, tag: row.tag || null,
       }).catch((e: any) => { lastError.value = e.message })
       // Apply CTCSS/DCS: recall slot → set tone → store back
@@ -3544,13 +3603,25 @@ body {
 }
 
 .th-drag    { width: 28px; }
-.th-slot    { width: 58px; }
-.th-freq    { width: 128px; }
-.th-mode    { width: 100px; }
-.th-sql     { width: 128px; }
-.th-ctcss   { width: 98px; }
-.th-dcs     { width: 72px; }
-.th-shift   { width: 86px; }
-.th-tag     { width: 120px; }
+.th-slot    { width: 56px; }
+.th-freq    { width: 118px; }
+.th-split   { width: 42px; text-align: center; }
+.th-mode    { width: 96px; }
+.th-sql     { width: 118px; }
+.th-ctcss   { width: 90px; }
+.th-dcs     { width: 68px; }
+.th-shift   { width: 80px; }
+.th-tag     { width: 114px; }
 .th-actions { width: 90px; }
+
+.td-split {
+  text-align: center;
+}
+
+.cell-checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: #f97316;
+}
 </style>
