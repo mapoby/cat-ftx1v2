@@ -5,7 +5,7 @@
       <div class="header-brand">
         <span class="brand-logo">FTX-1</span>
         <span class="brand-sub">CAT Controller</span>
-        <span class="brand-version">{{ useRuntimeConfig().public.appVersion }}</span>
+        <span class="brand-version">{{ appVersion }}</span>
       </div>
 
       <div class="conn-bar">
@@ -1018,6 +1018,7 @@ interface CommandResult {
 }
 
 const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel } = useSerial()
+const appVersion      = useRuntimeConfig().public.appVersion
 const selectedBaud    = ref(38400)
 const knownPorts      = ref<any[]>([])
 const selectedPortIdx = ref(-1)
@@ -2177,24 +2178,32 @@ function loadChannelList() {
 }
 
 function syncChannelListFromState() {
-  const existingTags = new Map(channelListRows.value.map(r => [r.slot, r.tag]))
-  channelListRows.value = sortedRadioChannels.value.map(ch => ({
-    slot:       ch.slot,
-    freq:       ch.freq,
-    txFreq:     ch.txFreq ?? null,
-    splitMem:   ch.splitMem,
-    mode:       ch.mode ?? 'USB',
-    sqlType:    ch.sqlType ?? 0,
-    ctcssIdx:   null,
-    dcsIdx:     null,
-    clarDir:    ch.clarDir ?? '+',
-    clarOffset: ch.clarOffset ?? 0,
-    rxClar:     ch.rxClar,
-    txClar:     ch.txClar,
-    shift:      ch.shift,
-    tag:        ch.tag ?? existingTags.get(ch.slot) ?? '',
-    dirty:      false,
-  }))
+  const existingRows = new Map(channelListRows.value.map(r => [r.slot, r]))
+  channelListRows.value = sortedRadioChannels.value.map(ch => {
+    const existing  = existingRows.get(ch.slot)
+    const tag       = ch.tag ?? existing?.tag ?? ''
+    const ctcssIdx  = existing?.ctcssIdx ?? null
+    const dcsIdx    = existing?.dcsIdx   ?? null
+    // dirty if tag or tone data came from local storage (radio MR never returns tags)
+    const dirty = (tag !== '' && ch.tag == null) || ctcssIdx !== null || dcsIdx !== null
+    return {
+      slot:       ch.slot,
+      freq:       ch.freq,
+      txFreq:     ch.txFreq ?? null,
+      splitMem:   ch.splitMem,
+      mode:       ch.mode ?? 'USB',
+      sqlType:    ch.sqlType ?? 0,
+      ctcssIdx,
+      dcsIdx,
+      clarDir:    ch.clarDir ?? '+',
+      clarOffset: ch.clarOffset ?? 0,
+      rxClar:     ch.rxClar,
+      txClar:     ch.txClar,
+      shift:      ch.shift,
+      tag,
+      dirty,
+    }
+  })
   saveChannelList()
 }
 
