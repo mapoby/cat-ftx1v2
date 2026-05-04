@@ -2181,11 +2181,7 @@ function syncChannelListFromState() {
   const existingRows = new Map(channelListRows.value.map(r => [r.slot, r]))
   for (const ch of sortedRadioChannels.value) {
     const existing = existingRows.get(ch.slot)
-    if (existing?.dirty) {
-      // Slot has pending local changes — preserve entirely, don't overwrite with radio data
-      continue
-    }
-    // Slot is clean (already in sync) or new — take radio data, preserve local-only fields
+    // Always update from radio data — dirty flag controls writing, not display
     const tag      = ch.tag ?? existing?.tag ?? ''
     const ctcssIdx = existing?.ctcssIdx ?? null
     const dcsIdx   = existing?.dcsIdx   ?? null
