@@ -709,6 +709,7 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
     await _sendAndWait('MR' + slotStr, 1500)
     if (state.value.radioChannels[slot]) {
       try { await _sendAndWait('MZ' + slotStr, 1000) } catch { /* no split data */ }
+      try { await _sendAndWait('MT' + slotStr, 1000) } catch { /* no tag */ }
     }
     return state.value.radioChannels[slot] ?? null
   } catch {

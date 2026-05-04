@@ -578,17 +578,23 @@
                 </td>
                 <td>
                   <input
-                    type="number" step="0.001" class="cell-input cell-freq"
-                    :value="(row.freq / 1_000_000).toFixed(6)"
-                    @change="updateRowFreq(row, ($event.target as HTMLInputElement).value)"
+                    type="text" class="cell-input cell-freq"
+                    :value="row.slot in editFreq ? editFreq[row.slot] : (row.freq / 1_000_000).toFixed(6)"
+                    @focus="editFreq[row.slot] = (row.freq / 1_000_000).toFixed(6)"
+                    @input="editFreq[row.slot] = ($event.target as HTMLInputElement).value"
+                    @change="updateRowFreq(row, editFreq[row.slot] ?? ''); delete editFreq[row.slot]"
+                    @blur="delete editFreq[row.slot]"
                   />
                 </td>
                 <td>
                   <input
-                    type="number" step="0.001" class="cell-input cell-freq"
-                    :value="row.txFreq !== null ? (row.txFreq / 1_000_000).toFixed(6) : ''"
+                    type="text" class="cell-input cell-freq"
+                    :value="row.slot in editTxFreq ? editTxFreq[row.slot] : (row.txFreq !== null ? (row.txFreq / 1_000_000).toFixed(6) : '')"
                     :placeholder="(row.freq / 1_000_000).toFixed(3)"
-                    @change="updateRowTxFreq(row, ($event.target as HTMLInputElement).value)"
+                    @focus="editTxFreq[row.slot] = row.txFreq !== null ? (row.txFreq / 1_000_000).toFixed(6) : ''"
+                    @input="editTxFreq[row.slot] = ($event.target as HTMLInputElement).value"
+                    @change="updateRowTxFreq(row, editTxFreq[row.slot] ?? ''); delete editTxFreq[row.slot]"
+                    @blur="delete editTxFreq[row.slot]"
                   />
                 </td>
                 <td class="td-split">
@@ -983,7 +989,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useSerial, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
 import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
@@ -1058,6 +1064,8 @@ interface EditableChannel {
   dirty: boolean
 }
 const channelListRows = ref<EditableChannel[]>([])
+const editFreq   = reactive<Record<number, string>>({})
+const editTxFreq = reactive<Record<number, string>>({})
 const chListScanning  = ref(false)
 const chListWriting   = ref(false)
 const chListScanDone  = ref(0)
