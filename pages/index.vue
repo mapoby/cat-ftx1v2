@@ -1694,10 +1694,11 @@ async function toggleConnection() {
 
 function portLabel(port: any, idx: number): string {
   const info = port.getInfo?.() ?? {}
+  if (info.portName) return String(info.portName)
   if (info.usbVendorId != null) {
-    const vid = info.usbVendorId.toString(16).padStart(4, '0')
-    const pid = info.usbProductId.toString(16).padStart(4, '0')
-    return `USB ${vid}:${pid}`
+    const vid = info.usbVendorId.toString(16).padStart(4, '0').toUpperCase()
+    const pid = info.usbProductId?.toString(16).padStart(4, '0').toUpperCase()
+    return pid ? `USB ${vid}:${pid}` : `USB ${vid}`
   }
   return `Port ${idx + 1}`
 }
