@@ -757,6 +757,7 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   const splitBit  = (config.splitMem && config.txFreq != null) ? '1' : '0'
   const txFreqStr = String(config.txFreq ?? config.freq).padStart(9, '0')
 
+  await send('VM000')
   await send('FA' + freqStr)
   await send('MD0' + modeCode)
   await send('CT0' + String(sqlType))
@@ -765,7 +766,8 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
     await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
   await send('MC0' + slotStr)
-  await send('VM')
+  await send('VM000')
+  await send('AM')
   await send('MZ' + slotStr + splitBit + txFreqStr)
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
