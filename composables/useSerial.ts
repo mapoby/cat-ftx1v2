@@ -133,6 +133,8 @@ export interface MemoryWriteConfig {
   splitMem?: boolean
   mode: string | null
   sqlType?: number | null
+  ctcssIdx?: number | null
+  dcsIdx?: number | null
   clarDir?: string | null
   clarOffset?: number | null
   rxClar?: boolean
@@ -742,6 +744,17 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
     await send('MT' + slotStr + tag)
+  }
+  const sqlType = config.sqlType ?? 0
+  if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
+    // Wait for radio to finish processing MW before recalling the slot to VFO
+    await new Promise(r => setTimeout(r, 200))
+    await send('MC0' + slotStr)
+    await send('MA')
+    if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
+    if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
+    await new Promise(r => setTimeout(r, 100))
+    await send('AM')
   }
 }
 

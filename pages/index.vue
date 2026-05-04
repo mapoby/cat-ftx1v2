@@ -2403,6 +2403,7 @@ async function writeAllToRadio() {
       await writeMemoryChannel(row.slot, {
         freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
         mode: row.mode, sqlType: row.sqlType,
+        ctcssIdx: row.ctcssIdx, dcsIdx: row.dcsIdx,
         clarDir: row.clarDir, clarOffset: row.clarOffset,
         rxClar: row.rxClar, txClar: row.txClar,
         shift: row.shift, tag: row.tag || null,
