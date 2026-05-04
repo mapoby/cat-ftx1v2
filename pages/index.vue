@@ -2237,6 +2237,8 @@ function onDrop(e: DragEvent, idx: number) {
   const rows = [...channelListRows.value]
   const [moved] = rows.splice(src, 1)
   rows.splice(idx, 0, moved)
+  const sortedSlots = channelListRows.value.map(r => r.slot).sort((a, b) => a - b)
+  rows.forEach((r, i) => { r.slot = sortedSlots[i]; r.dirty = true })
   channelListRows.value = rows
   onDragEnd()
 }
