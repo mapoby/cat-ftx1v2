@@ -747,12 +747,20 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
   const sqlType = config.sqlType ?? 0
   if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
+    // MA ignores MC0 and recalls the radio's last-active slot; set VFO directly instead
+    await send('FA' + freqStr)
+    await send('MD0' + modeCode)
     await send('MC0' + slotStr)
-    await send('MA')
     await send('CT0' + String(sqlType))
     if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
     if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
     await send('AM')
+    // AM may overwrite split and tag; re-send to restore
+    await send('MZ' + slotStr + splitBit + txFreqStr)
+    if (config.tag != null) {
+      const tag = config.tag.substring(0, 12).padEnd(12, ' ')
+      await send('MT' + slotStr + tag)
+    }
   }
 }
 
