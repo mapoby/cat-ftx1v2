@@ -2178,15 +2178,15 @@ function loadChannelList() {
 }
 
 function syncChannelListFromState() {
+  // Merge: update slots that were scanned, keep all other existing rows untouched
   const existingRows = new Map(channelListRows.value.map(r => [r.slot, r]))
-  channelListRows.value = sortedRadioChannels.value.map(ch => {
-    const existing  = existingRows.get(ch.slot)
-    const tag       = ch.tag ?? existing?.tag ?? ''
-    const ctcssIdx  = existing?.ctcssIdx ?? null
-    const dcsIdx    = existing?.dcsIdx   ?? null
-    // dirty if tag or tone data came from local storage (radio MR never returns tags)
-    const dirty = (tag !== '' && ch.tag == null) || ctcssIdx !== null || dcsIdx !== null
-    return {
+  for (const ch of sortedRadioChannels.value) {
+    const existing = existingRows.get(ch.slot)
+    const tag      = ch.tag ?? existing?.tag ?? ''
+    const ctcssIdx = existing?.ctcssIdx ?? null
+    const dcsIdx   = existing?.dcsIdx   ?? null
+    const dirty    = (tag !== '' && ch.tag == null) || ctcssIdx !== null || dcsIdx !== null
+    existingRows.set(ch.slot, {
       slot:       ch.slot,
       freq:       ch.freq,
       txFreq:     ch.txFreq ?? null,
@@ -2202,8 +2202,9 @@ function syncChannelListFromState() {
       shift:      ch.shift,
       tag,
       dirty,
-    }
-  })
+    })
+  }
+  channelListRows.value = Array.from(existingRows.values()).sort((a, b) => a.slot - b.slot)
   saveChannelList()
 }
 
