@@ -651,6 +651,7 @@
                 </td>
                 <td class="td-actions">
                   <button class="btn btn-xs" title="Copy to Main VFO" :disabled="!state.connected" @click="recallRadioChannel(row)">Copy to VFO</button>
+                  <button class="btn btn-xs btn-ghost" title="Look up on RSGB" @click="openRepeaterInfo(row)">Info</button>
                   <button class="btn btn-xs btn-del" title="Delete row" @click="deleteChannelRow(idx)">✕</button>
                 </td>
               </tr>
@@ -923,6 +924,57 @@
       </div>
     </Teleport>
 
+    <!-- ── Repeater info dialog ── -->
+    <Teleport to="body">
+      <div v-if="repInfoDialog" class="rsgb-backdrop" @click.self="repInfoDialog = false">
+        <div class="repinfo-modal" role="dialog" aria-modal="true">
+
+          <div class="rsgb-header">
+            <span class="rsgb-title">
+              Repeater Info
+              <span v-if="repInfoCallsign" class="repinfo-callsign">— {{ repInfoCallsign.toUpperCase() }}</span>
+            </span>
+            <button class="tone-modal-close" @click="repInfoDialog = false" aria-label="Close">✕</button>
+          </div>
+
+          <div v-if="repInfoLoading" class="repinfo-loading">Searching…</div>
+          <div v-else-if="repInfoError" class="rsgb-error">{{ repInfoError }}</div>
+          <div v-else class="repinfo-list">
+            <div v-for="e in repInfoResults" :key="e.id" class="repinfo-card">
+              <div class="repinfo-card-header">
+                <span class="repinfo-rptr">{{ e.repeater }}</span>
+                <span class="repinfo-status" :class="repStatusClass(e.status)">{{ e.status }}</span>
+                <a
+                  :href="`https://ukrepeater.net/my_repeater.php?id=${e.id}`"
+                  target="_blank" rel="noopener"
+                  class="btn btn-xs btn-ghost repinfo-link"
+                >ukrepeater.net ↗</a>
+              </div>
+              <table class="repinfo-table">
+                <tr>
+                  <td>Town</td><td>{{ e.town }}</td>
+                  <td>Keeper</td><td>{{ e.keeperCallsign }}</td>
+                </tr>
+                <tr>
+                  <td>Band</td><td>{{ e.band }}</td>
+                  <td>Locator</td><td>{{ e.locator }}</td>
+                </tr>
+                <tr>
+                  <td>Listen (MHz)</td><td>{{ (e.tx / 1_000_000).toFixed(4) }}</td>
+                  <td>TX to (MHz)</td><td>{{ (e.rx / 1_000_000).toFixed(4) }}</td>
+                </tr>
+                <tr>
+                  <td>CTCSS</td><td>{{ e.ctcss > 0 ? `${e.ctcss} Hz` : '—' }}</td>
+                  <td>Modes</td><td>{{ e.modeCodes.join(', ') }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -1036,6 +1088,11 @@ const rsgbLoading     = ref(false)
 const rsgbError       = ref<string | null>(null)
 const rsgbAddFromSlot = ref(1)
 const rsgbOverwrite   = ref(false)
+const repInfoDialog   = ref(false)
+const repInfoLoading  = ref(false)
+const repInfoResults  = ref<RsgbEntry[]>([])
+const repInfoError    = ref<string | null>(null)
+const repInfoCallsign = ref('')
 
 function loadChannels() {
   try {
@@ -2445,6 +2502,34 @@ async function recallRadioChannel(ch: { slot: number }) {
   const slotStr = String(ch.slot).padStart(5, '0')
   await send('MC0' + slotStr).catch((e: any) => { lastError.value = e.message })
   await send('MA').catch((e: any) => { lastError.value = e.message })
+}
+
+async function openRepeaterInfo(row: EditableChannel) {
+  const cs = row.tag.trim().split(/\s+/).pop()?.trim() ?? ''
+  repInfoCallsign.value = cs
+  repInfoResults.value  = []
+  repInfoError.value    = null
+  repInfoDialog.value   = true
+  if (!cs) { repInfoError.value = 'No callsign found in tag.'; return }
+  repInfoLoading.value  = true
+  try {
+    const res = await fetch(`https://api-beta.rsgb.online/callsign/${encodeURIComponent(cs.toLowerCase())}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    const json = await res.json()
+    const entries: RsgbEntry[] = Array.isArray(json?.data) ? json.data : []
+    if (entries.length === 0) repInfoError.value = 'No RSGB data found for this callsign.'
+    repInfoResults.value = entries
+  } catch (e: any) {
+    repInfoError.value = String(e.message ?? 'Fetch failed')
+  } finally {
+    repInfoLoading.value = false
+  }
+}
+
+function repStatusClass(status: string): string {
+  if (status === 'OPERATIONAL') return 'repinfo-status--ok'
+  if (status?.includes('REDUCED')) return 'repinfo-status--warn'
+  return 'repinfo-status--off'
 }
 
 async function writeChannelToRadio(ch: ChannelConfig) {
@@ -3954,7 +4039,7 @@ body {
 .th-dcs     { width: 68px; }
 .th-shift   { width: 80px; }
 .th-tag     { width: 114px; }
-.th-actions { width: 90px; }
+.th-actions { width: 136px; }
 
 .td-split {
   text-align: center;
@@ -4129,6 +4214,101 @@ body {
 
 .rsgb-import-spacer {
   flex: 1;
+}
+
+/* ── Repeater info dialog ── */
+.repinfo-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(560px, 95vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.repinfo-callsign {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.repinfo-loading {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+.repinfo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repinfo-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.repinfo-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.repinfo-rptr {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  flex: 1;
+}
+
+.repinfo-status {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.repinfo-status--ok   { background: rgba(34,197,94,.15);  color: #22c55e; }
+.repinfo-status--warn { background: rgba(249,115,22,.15); color: #f97316; }
+.repinfo-status--off  { background: rgba(239,68,68,.12);  color: #ef4444; }
+
+.repinfo-link {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.repinfo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.repinfo-table td {
+  padding: 3px 6px;
+}
+
+.repinfo-table td:nth-child(odd) {
+  color: var(--text-muted);
+  width: 90px;
+  white-space: nowrap;
+}
+
+.repinfo-table td:nth-child(even) {
+  font-weight: 500;
 }
 
 .rsgb-band-sel {
