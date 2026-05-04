@@ -2191,9 +2191,11 @@ function syncChannelListFromState() {
     const existing = existingRows.get(ch.slot)
     // Always update from radio data — dirty flag controls writing, not display
     const tag      = ch.tag ?? existing?.tag ?? ''
-    const ctcssIdx = existing?.ctcssIdx ?? null
-    const dcsIdx   = existing?.dcsIdx   ?? null
-    const dirty    = (tag !== '' && ch.tag == null) || ctcssIdx !== null || dcsIdx !== null
+    const ctcssIdx = ch.ctcssIdx ?? existing?.ctcssIdx ?? null
+    const dcsIdx   = ch.dcsIdx   ?? existing?.dcsIdx   ?? null
+    const dirty    = (tag !== '' && ch.tag == null) ||
+                     (ctcssIdx !== null && ch.ctcssIdx == null) ||
+                     (dcsIdx !== null && ch.dcsIdx == null)
     existingRows.set(ch.slot, {
       slot:       ch.slot,
       freq:       ch.freq,

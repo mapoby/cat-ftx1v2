@@ -125,6 +125,8 @@ export interface RadioChannel {
   txClar: boolean
   shift: number         // 0=simplex 1=plus 2=minus
   tag: string | null
+  ctcssIdx: number | null
+  dcsIdx: number | null
 }
 
 export interface MemoryWriteConfig {
@@ -511,6 +513,8 @@ function _parseResponse(cmd: string, params: string, sourceCmd: string | null = 
             rxClar, txClar,
             shift: isNaN(shift) ? 0 : shift,
             tag: prev?.tag ?? null,
+            ctcssIdx: prev?.ctcssIdx ?? null,
+            dcsIdx:   prev?.dcsIdx   ?? null,
           }
           ch.radioChannels = channels
         }
@@ -709,9 +713,28 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
   const slotStr = String(slot).padStart(5, '0')
   try {
     await _sendAndWait('MR' + slotStr, 1500)
-    if (state.value.radioChannels[slot]) {
+    const ch = state.value.radioChannels[slot]
+    if (ch) {
       try { await _sendAndWait('MZ' + slotStr, 1000) } catch { /* no split data */ }
       try { await _sendAndWait('MT' + slotStr, 1000) } catch { /* no tag */ }
+      const sqlType = ch.sqlType ?? 0
+      if (sqlType > 0) {
+        // Switch to memory mode to read CTCSS/DCS tone for this slot via CN query
+        await send('VM011')
+        await send('MC0' + slotStr)
+        await new Promise(r => setTimeout(r, 100))
+        let ctcssIdx: number | null = null
+        let dcsIdx: number | null = null
+        if (sqlType <= 2) {
+          try { await _sendAndWait('CN00', 1000); ctcssIdx = state.value.mainCtcssTone } catch { }
+        } else {
+          try { await _sendAndWait('CN01', 1000); dcsIdx = state.value.mainDcsCode } catch { }
+        }
+        await send('VM000')
+        const channels = { ...state.value.radioChannels }
+        channels[slot] = { ...channels[slot], ctcssIdx, dcsIdx }
+        _patch({ radioChannels: channels })
+      }
     }
     return state.value.radioChannels[slot] ?? null
   } catch {
@@ -747,15 +770,17 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
   const sqlType = config.sqlType ?? 0
   if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
-    // MC0 selects the target slot for AM and loads its data into VFO (memory mode).
-    // FA/MD0/CT0/CN sent AFTER MC0 override the VFO state before AM commits it.
-    await send('MC0' + slotStr)
+    // Set VFO to target state first (while still in VFO mode so FA/MD0 take effect),
+    // then switch to memory mode, select slot, and commit with AM.
     await send('FA' + freqStr)
     await send('MD0' + modeCode)
     await send('CT0' + String(sqlType))
     if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
     if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
-    await send('AM')
+    await send('VM011')          // switch main side to memory mode
+    await send('MC0' + slotStr)  // select target slot
+    await send('AM')             // store VFO → memory slot
+    await send('VM000')          // restore VFO mode
     // AM may overwrite split and tag; re-send to restore
     await send('MZ' + slotStr + splitBit + txFreqStr)
     if (config.tag != null) {
