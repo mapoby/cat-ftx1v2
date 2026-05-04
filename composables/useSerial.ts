@@ -747,13 +747,11 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
   const sqlType = config.sqlType ?? 0
   if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
-    // Wait for radio to finish processing MW before recalling the slot to VFO
-    await new Promise(r => setTimeout(r, 200))
     await send('MC0' + slotStr)
     await send('MA')
+    await send('CT0' + String(sqlType))
     if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
     if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
-    await new Promise(r => setTimeout(r, 100))
     await send('AM')
   }
 }
