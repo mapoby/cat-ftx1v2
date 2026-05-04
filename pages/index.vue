@@ -2419,7 +2419,8 @@ async function fetchRsgb() {
     const res = await fetch(base + path)
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
     const json = await res.json()
-    const entries: RsgbEntry[] = Array.isArray(json?.data) ? json.data : []
+    const entries: RsgbEntry[] = (Array.isArray(json?.data) ? json.data : [])
+      .map((e: any) => ({ ...e, modeCodes: Array.isArray(e.modeCodes) ? e.modeCodes : [] }))
     rsgbResults.value = entries
     const sel = new Set<number>()
     for (const e of entries) {
@@ -2517,7 +2518,8 @@ async function openRepeaterInfo(row: EditableChannel) {
     const res = await fetch(`https://api-beta.rsgb.online/callsign/${encodeURIComponent(cs.toLowerCase())}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
     const json = await res.json()
-    const entries: RsgbEntry[] = Array.isArray(json?.data) ? json.data : []
+    const entries: RsgbEntry[] = (Array.isArray(json?.data) ? json.data : [])
+      .map((e: any) => ({ ...e, modeCodes: Array.isArray(e.modeCodes) ? e.modeCodes : [] }))
     if (entries.length === 0) repInfoError.value = 'No RSGB data found for this callsign.'
     repInfoResults.value = entries
   } catch (e: any) {
