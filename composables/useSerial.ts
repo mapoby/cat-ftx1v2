@@ -764,9 +764,9 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
     await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
   if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
     await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
-  await send('MZ00000' + splitBit + txFreqStr)
   await send('MC0' + slotStr)
   await send('VM')
+  await send('MZ' + slotStr + splitBit + txFreqStr)
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
     await send('MT' + slotStr + tag)
