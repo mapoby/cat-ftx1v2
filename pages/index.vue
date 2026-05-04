@@ -2399,16 +2399,6 @@ async function writeAllToRadio() {
         rxClar: row.rxClar, txClar: row.txClar,
         shift: row.shift, tag: row.tag || null,
       }).catch((e: any) => { lastError.value = e.message })
-      // Apply CTCSS/DCS: recall slot → set tone → store back
-      if (row.sqlType > 0 && (row.ctcssIdx !== null || row.dcsIdx !== null)) {
-        const slotStr = String(row.slot).padStart(5, '0')
-        await send('MC0' + slotStr).catch(() => {})
-        await send('MA').catch(() => {})
-        await send(`CT0${row.sqlType}`).catch(() => {})
-        if (row.ctcssIdx !== null) await send(`CN00${String(row.ctcssIdx).padStart(3, '0')}`).catch(() => {})
-        if (row.dcsIdx   !== null) await send(`CN01${String(row.dcsIdx).padStart(3, '0')}`).catch(() => {})
-        await send('AM').catch(() => {})
-      }
       row.dirty = false
       chListWriteDone.value++
     }
