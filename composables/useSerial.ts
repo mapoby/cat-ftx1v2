@@ -747,10 +747,11 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
   const sqlType = config.sqlType ?? 0
   if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
-    // MA ignores MC0 and recalls the radio's last-active slot; set VFO directly instead
+    // MC0 selects the target slot for AM and loads its data into VFO (memory mode).
+    // FA/MD0/CT0/CN sent AFTER MC0 override the VFO state before AM commits it.
+    await send('MC0' + slotStr)
     await send('FA' + freqStr)
     await send('MD0' + modeCode)
-    await send('MC0' + slotStr)
     await send('CT0' + String(sqlType))
     if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
     if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
