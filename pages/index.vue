@@ -2126,6 +2126,7 @@ function updateRowTxFreq(row: EditableChannel, mhzStr: string) {
 function updateRowSlot(row: EditableChannel, newSlotStr: string) {
   const n = parseInt(newSlotStr)
   if (isNaN(n) || n < 1 || n > 999) return
+  if (channelListRows.value.some(r => r !== row && r.slot === n)) return
   row.slot = n
   row.dirty = true
   channelListRows.value = [...channelListRows.value].sort((a, b) => a.slot - b.slot)
