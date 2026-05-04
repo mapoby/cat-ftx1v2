@@ -753,40 +753,23 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   const slotStr   = String(slot).padStart(5, '0')
   const freqStr   = String(config.freq).padStart(9, '0')
   const modeCode  = MODE_CODE[config.mode ?? ''] ?? '2'
-  const sqlCode   = String(config.sqlType ?? 0)
-  const shiftCode = String(config.shift ?? 0)
-  const clarDir   = config.clarDir ?? '+'
-  const clarOff   = String(config.clarOffset ?? 0).padStart(4, '0')
-  const rxClar    = config.rxClar ? '1' : '0'
-  const txClar    = config.txClar ? '1' : '0'
-  const payload   = slotStr + freqStr + clarDir + clarOff + rxClar + txClar + modeCode + '1' + sqlCode + '00' + shiftCode
-  await send('MW' + payload)
-  const txFreqStr = String(config.txFreq ?? config.freq).padStart(9, '0')
+  const sqlType   = config.sqlType ?? 0
   const splitBit  = (config.splitMem && config.txFreq != null) ? '1' : '0'
-  await send('MZ' + slotStr + splitBit + txFreqStr)
+  const txFreqStr = String(config.txFreq ?? config.freq).padStart(9, '0')
+
+  await send('FA' + freqStr)
+  await send('MD0' + modeCode)
+  await send('CT0' + String(sqlType))
+  if (sqlType >= 1 && sqlType <= 2 && config.ctcssIdx != null)
+    await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
+  if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
+    await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
+  await send('MZ00000' + splitBit + txFreqStr)
+  await send('MC0' + slotStr)
+  await send('VM')
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
     await send('MT' + slotStr + tag)
-  }
-  const sqlType = config.sqlType ?? 0
-  if (sqlType > 0 && (config.ctcssIdx != null || config.dcsIdx != null)) {
-    // Set VFO to target state first (while still in VFO mode so FA/MD0 take effect),
-    // then switch to memory mode, select slot, and commit with AM.
-    await send('FA' + freqStr)
-    await send('MD0' + modeCode)
-    await send('CT0' + String(sqlType))
-    if (config.ctcssIdx != null) await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
-    if (config.dcsIdx   != null) await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
-    await send('VM011')          // switch main side to memory mode
-    await send('MC0' + slotStr)  // select target slot
-    await send('AM')             // store VFO → memory slot
-    await send('VM000')          // restore VFO mode
-    // AM may overwrite split and tag; re-send to restore
-    await send('MZ' + slotStr + splitBit + txFreqStr)
-    if (config.tag != null) {
-      const tag = config.tag.substring(0, 12).padEnd(12, ' ')
-      await send('MT' + slotStr + tag)
-    }
   }
 }
 
