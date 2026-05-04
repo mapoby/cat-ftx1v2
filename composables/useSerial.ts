@@ -712,6 +712,7 @@ export async function sendPreset(commands: string[]): Promise<CommandResult[]> {
 export async function readMemoryChannel(slot: number): Promise<RadioChannel | null> {
   const slotStr = String(slot).padStart(5, '0')
   try {
+    await send('MC0' + slotStr)
     await _sendAndWait('MR' + slotStr, 1500)
     const ch = state.value.radioChannels[slot]
     if (ch) {
@@ -719,10 +720,6 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
       try { await _sendAndWait('MT' + slotStr, 1000) } catch { /* no tag */ }
       const sqlType = ch.sqlType ?? 0
       if (sqlType > 0) {
-        // Switch to memory mode to read CTCSS/DCS tone for this slot via CN query
-        await send('VM011')
-        await send('MC0' + slotStr)
-        await new Promise(r => setTimeout(r, 100))
         let ctcssIdx: number | null = null
         let dcsIdx: number | null = null
         if (sqlType <= 2) {
@@ -730,7 +727,6 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
         } else {
           try { await _sendAndWait('CN01', 1000); dcsIdx = state.value.mainDcsCode } catch { }
         }
-        await send('VM000')
         const channels = { ...state.value.radioChannels }
         channels[slot] = { ...channels[slot], ctcssIdx, dcsIdx }
         _patch({ radioChannels: channels })
@@ -743,6 +739,7 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
 }
 
 export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
+  await send('VM011')
   for (let i = from; i <= to; i++) {
     if (!state.value.connected) break
     await readMemoryChannel(i)
