@@ -5,7 +5,7 @@
       <div class="header-brand">
         <span class="brand-logo">FTX-1</span>
         <span class="brand-sub">CAT Controller</span>
-        <span class="brand-version">v1.1</span>
+        <span class="brand-version">{{ useRuntimeConfig().public.appVersion }}</span>
       </div>
 
       <div class="conn-bar">

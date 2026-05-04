@@ -7,6 +7,8 @@ COPY package.json ./
 RUN npm install --prefer-offline
 
 COPY . .
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 RUN npm run generate          # outputs to .output/public
 
 # ── Stage 2: serve with nginx ─────────────────────────────────────────────────
