@@ -1694,13 +1694,34 @@ async function toggleConnection() {
   }
 }
 
+const USB_SERIAL_NAMES: Record<string, string> = {
+  '10c4:ea60': 'Silicon Labs CP2102',
+  '10c4:ea61': 'Silicon Labs CP2102N',
+  '10c4:ea70': 'Silicon Labs CP2105',
+  '10c4:eac9': 'Silicon Labs CP2108',
+  '0403:6001': 'FTDI FT232R',
+  '0403:6010': 'FTDI FT2232',
+  '0403:6011': 'FTDI FT4232',
+  '0403:6014': 'FTDI FT232H',
+  '0403:6015': 'FTDI FT230X',
+  '067b:2303': 'Prolific PL2303',
+  '067b:23a3': 'Prolific PL2303HXD',
+  '1a86:7523': 'CH340',
+  '1a86:7522': 'CH341',
+  '1a86:55d4': 'CH9102',
+  '2341:0043': 'Arduino Uno',
+  '2341:0001': 'Arduino Mega',
+}
+
 function portLabel(port: any, idx: number): string {
   const info = port.getInfo?.() ?? {}
   if (info.portName) return String(info.portName)
   if (info.usbVendorId != null) {
-    const vid = info.usbVendorId.toString(16).padStart(4, '0').toUpperCase()
-    const pid = info.usbProductId?.toString(16).padStart(4, '0').toUpperCase()
-    return pid ? `USB ${vid}:${pid}` : `USB ${vid}`
+    const vid = info.usbVendorId.toString(16).padStart(4, '0')
+    const pid = info.usbProductId?.toString(16).padStart(4, '0')
+    const name = pid ? USB_SERIAL_NAMES[`${vid}:${pid}`] : undefined
+    if (name) return name
+    return pid ? `USB ${vid.toUpperCase()}:${pid.toUpperCase()}` : `USB ${vid.toUpperCase()}`
   }
   return `Port ${idx + 1}`
 }
