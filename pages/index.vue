@@ -819,6 +819,8 @@
             <button class="tone-modal-close" @click="rsgbDialog = false" aria-label="Close">✕</button>
           </div>
 
+          <div class="rsgb-mode-note">Only SSB, AM, FM and C4FM modes are supported by the Yaesu FTX-1. Greyed out entries use unsupported modes.</div>
+
           <div class="rsgb-search-row">
             <select v-model="rsgbSearchType" class="sel rsgb-type-sel">
               <option value="band">Band</option>
@@ -1715,14 +1717,17 @@ const USB_SERIAL_NAMES: Record<string, string> = {
 
 function portLabel(port: any, idx: number): string {
   const info = port.getInfo?.() ?? {}
-  if (info.portName) return String(info.portName)
+  const comName = info.portName ? String(info.portName) : null
+  let chipName: string | null = null
   if (info.usbVendorId != null) {
     const vid = info.usbVendorId.toString(16).padStart(4, '0')
     const pid = info.usbProductId?.toString(16).padStart(4, '0')
-    const name = pid ? USB_SERIAL_NAMES[`${vid}:${pid}`] : undefined
-    if (name) return name
-    return pid ? `USB ${vid.toUpperCase()}:${pid.toUpperCase()}` : `USB ${vid.toUpperCase()}`
+    chipName = (pid ? USB_SERIAL_NAMES[`${vid}:${pid}`] : undefined) ?? null
+    if (!chipName) chipName = pid ? `USB ${vid.toUpperCase()}:${pid.toUpperCase()}` : `USB ${vid.toUpperCase()}`
   }
+  if (comName && chipName) return `${comName} (${chipName})`
+  if (comName) return comName
+  if (chipName) return chipName
   return `Port ${idx + 1}`
 }
 
@@ -4141,6 +4146,16 @@ body {
 .rsgb-query-input:focus {
   outline: none;
   border-color: #f97316;
+}
+
+.rsgb-mode-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 4px;
+  padding: 6px 10px;
+  flex-shrink: 0;
 }
 
 .rsgb-error {
