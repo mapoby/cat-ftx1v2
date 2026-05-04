@@ -842,7 +842,7 @@
               type="text" v-model="rsgbSearchQuery" class="rsgb-query-input"
               :placeholder="rsgbSearchType === 'callsign' ? 'GB3XYZ…' : 'IO91WM or IO91…'"
               :style="rsgbSearchType === 'locator' ? 'text-transform:uppercase' : ''"
-              @input="if (rsgbSearchType === 'locator') rsgbSearchQuery = (rsgbSearchQuery as string).toUpperCase()"
+              @input="if (rsgbSearchType === 'locator') rsgbSearchQuery = String(rsgbSearchQuery).toUpperCase()"
               @keydown.enter="fetchRsgb"
             />
             <button class="btn btn-primary btn-sm" :disabled="rsgbLoading || !rsgbSearchQuery.trim()" @click="fetchRsgb">
