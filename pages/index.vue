@@ -636,7 +636,7 @@
                   </select>
                 </td>
                 <td>
-                  <select class="cell-select" v-model.number="row.shift" @change="row.dirty = true">
+                  <select class="cell-select" v-model.number="row.shift" :disabled="row.splitMem" @change="row.dirty = true">
                     <option :value="0">Simplex</option>
                     <option :value="1">+</option>
                     <option :value="2">−</option>
@@ -650,7 +650,7 @@
                   />
                 </td>
                 <td class="td-actions">
-                  <button class="btn btn-xs" title="Recall to Main VFO" :disabled="!state.connected" @click="recallRadioChannel(row)">Recall</button>
+                  <button class="btn btn-xs" title="Copy to Main VFO" :disabled="!state.connected" @click="recallRadioChannel(row)">Copy to VFO</button>
                   <button class="btn btn-xs btn-del" title="Delete row" @click="deleteChannelRow(idx)">✕</button>
                 </td>
               </tr>
@@ -2079,7 +2079,19 @@ const rsgbSelectedChannelCount = computed(() =>
     .reduce((n, e) => n + (e.modeCodes.includes('A') ? 1 : 0) + (e.modeCodes.includes('F') ? 1 : 0), 0)
 )
 
+function saveChannelList() {
+  try { localStorage.setItem('cat_channel_list', JSON.stringify(channelListRows.value)) } catch { /* quota */ }
+}
+
+function loadChannelList() {
+  try {
+    const raw = localStorage.getItem('cat_channel_list')
+    if (raw) channelListRows.value = JSON.parse(raw)
+  } catch { /* corrupt, ignore */ }
+}
+
 function syncChannelListFromState() {
+  const existingTags = new Map(channelListRows.value.map(r => [r.slot, r.tag]))
   channelListRows.value = sortedRadioChannels.value.map(ch => ({
     slot:       ch.slot,
     freq:       ch.freq,
@@ -2094,9 +2106,10 @@ function syncChannelListFromState() {
     rxClar:     ch.rxClar,
     txClar:     ch.txClar,
     shift:      ch.shift,
-    tag:        ch.tag ?? '',
+    tag:        ch.tag ?? existingTags.get(ch.slot) ?? '',
     dirty:      false,
   }))
+  saveChannelList()
 }
 
 function updateRowFreq(row: EditableChannel, mhzStr: string) {
@@ -2300,6 +2313,7 @@ async function writeAllToRadio() {
       row.dirty = false
       chListWriteDone.value++
     }
+    saveChannelList()
   } finally {
     chListWriting.value = false
   }
@@ -2464,10 +2478,13 @@ function chSqlLabel(ch: ChannelConfig): string | null {
 
 // ----------- lifecycle -----------
 
+watch(channelListRows, saveChannelList, { deep: true })
+
 onMounted(async () => {
   const savedBaud = localStorage.getItem('cat_baud')
   if (savedBaud) selectedBaud.value = Number(savedBaud)
   loadChannels()
+  loadChannelList()
   loadPresets()
   knownPorts.value = await getKnownPorts()
   const savedVidPid = localStorage.getItem('cat_port_vid_pid')
