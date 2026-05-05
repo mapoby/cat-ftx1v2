@@ -527,6 +527,12 @@
           <button class="btn btn-sm chlist-action-btn" :disabled="chListWriting || (!chListDirtyCount && !chListWriting) || !state.connected" @click="writeAllToRadio">
             {{ chListWriting ? `Writing… ${chListWriteDone}/${chListWriteTotal}` : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
+          <button
+            v-if="selectedSlots.size > 0"
+            class="btn btn-sm btn-del chlist-action-btn"
+            :disabled="chListDeleting || !state.connected"
+            @click="deleteSelectedFromRadio"
+          >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.size})` }}</button>
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
           <button class="btn btn-sm" @click="rsgbDialog = true">+ Add from RSGB</button>
@@ -541,6 +547,13 @@
           <table class="chlist-table" v-if="channelListRows.length">
             <thead>
               <tr>
+                <th class="th-check">
+                  <input type="checkbox" class="cell-checkbox"
+                    :checked="selectedSlots.size === channelListRows.length && channelListRows.length > 0"
+                    :indeterminate="selectedSlots.size > 0 && selectedSlots.size < channelListRows.length"
+                    @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
+                  />
+                </th>
                 <th class="th-drag"></th>
                 <th class="th-slot">Slot</th>
                 <th class="th-freq">RX Freq (MHz)</th>
@@ -561,6 +574,7 @@
                 :key="idx"
                 :class="{
                   'row-dirty':     row.dirty,
+                  'row-selected':  selectedSlots.has(row.slot),
                   'row-drag-over': dragOverIdx === idx && dragSrcIdx !== idx,
                 }"
                 draggable="true"
@@ -569,6 +583,12 @@
                 @dragend="onDragEnd"
                 @drop="onDrop($event, idx)"
               >
+                <td class="td-check">
+                  <input type="checkbox" class="cell-checkbox"
+                    :checked="selectedSlots.has(row.slot)"
+                    @change="toggleRowSelect(row.slot, ($event.target as HTMLInputElement).checked)"
+                  />
+                </td>
                 <td class="td-drag">⠿</td>
                 <td class="td-slot-edit">
                   <input
@@ -1024,7 +1044,7 @@ interface CommandResult {
   ok: boolean
 }
 
-const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel } = useSerial()
+const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel, deleteMemorySlot } = useSerial()
 const appVersion      = useRuntimeConfig().public.appVersion
 const buildDate       = useRuntimeConfig().public.buildDate
 const selectedBaud    = ref(38400)
@@ -1076,6 +1096,8 @@ const chListWriteDone = ref(0)
 const chListWriteTotal = ref(0)
 const chListScanFrom  = ref(1)
 const chListScanTo    = ref(999)
+const selectedSlots   = ref<Set<number>>(new Set())
+const chListDeleting  = ref(false)
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
 const csvImportRef    = ref<HTMLInputElement | null>(null)
@@ -2262,7 +2284,37 @@ function addNewChannel() {
 }
 
 function deleteChannelRow(idx: number) {
+  const slot = channelListRows.value[idx]?.slot
+  if (slot != null) selectedSlots.value.delete(slot)
   channelListRows.value = channelListRows.value.filter((_, i) => i !== idx)
+}
+
+function toggleRowSelect(slot: number, checked: boolean) {
+  const s = new Set(selectedSlots.value)
+  checked ? s.add(slot) : s.delete(slot)
+  selectedSlots.value = s
+}
+
+function toggleSelectAll(checked: boolean) {
+  selectedSlots.value = checked
+    ? new Set(channelListRows.value.map(r => r.slot))
+    : new Set()
+}
+
+async function deleteSelectedFromRadio() {
+  if (chListDeleting.value || selectedSlots.value.size === 0) return
+  chListDeleting.value = true
+  const slots = [...selectedSlots.value]
+  try {
+    for (const slot of slots) {
+      await deleteMemorySlot(slot).catch((e: any) => { lastError.value = e.message })
+    }
+    channelListRows.value = channelListRows.value.filter(r => !selectedSlots.value.has(r.slot))
+    selectedSlots.value = new Set()
+    saveChannelList()
+  } finally {
+    chListDeleting.value = false
+  }
 }
 
 function onDragStart(e: DragEvent, idx: number) {
@@ -3993,6 +4045,10 @@ body {
   background: rgba(249, 115, 22, .05) !important;
 }
 
+.row-selected {
+  background: rgba(99, 179, 237, .08) !important;
+}
+
 .row-dirty .cell-slot {
   color: #f97316;
 }
@@ -4103,6 +4159,8 @@ body {
   font-style: italic;
 }
 
+.th-check   { width: 28px; text-align: center; }
+.td-check   { text-align: center; padding: 0 4px; }
 .th-drag    { width: 28px; }
 .th-slot    { width: 56px; }
 .th-freq    { width: 118px; }
