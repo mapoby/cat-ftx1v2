@@ -5,7 +5,7 @@
       <div class="header-brand">
         <span class="brand-logo">FTX-1</span>
         <span class="brand-sub">CAT Controller</span>
-        <span class="brand-version">{{ appVersion }}</span>
+        <span class="brand-version">{{ appVersion }} (build {{ buildDate }})</span>
       </div>
 
       <div class="conn-bar">
@@ -485,7 +485,7 @@
               @click="recallRadioChannel(ch)"
             >
               <span class="ch-slot">{{ String(ch.slot).padStart(3, '0') }}</span>
-              <span v-if="radioChSqlLabel(ch)" class="ch-sql">{{ radioChSqlLabel(ch) }}</span>
+              <span v-if="ch.tag" class="ch-sql">{{ ch.tag }}</span>
               <span class="ch-freq">{{ (ch.freq / 1_000_000).toFixed(3) }}{{ ch.mode ? ' ' + ch.mode : '' }}</span>
             </div>
           </div>
@@ -1026,6 +1026,7 @@ interface CommandResult {
 
 const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel } = useSerial()
 const appVersion      = useRuntimeConfig().public.appVersion
+const buildDate       = useRuntimeConfig().public.buildDate
 const selectedBaud    = ref(38400)
 const knownPorts      = ref<any[]>([])
 const selectedPortIdx = ref(-1)
