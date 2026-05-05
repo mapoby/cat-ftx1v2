@@ -528,11 +528,11 @@
             {{ chListWriting ? `Writing… ${chListWriteDone}/${chListWriteTotal}` : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
           <button
-            v-if="selectedSlots.size > 0"
+            v-if="selectedSlots.length > 0"
             class="btn btn-sm btn-del chlist-action-btn"
             :disabled="chListDeleting || !state.connected"
             @click="deleteSelectedFromRadio"
-          >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.size})` }}</button>
+          >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.length})` }}</button>
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
           <button class="btn btn-sm" @click="rsgbDialog = true">+ Add from RSGB</button>
@@ -549,8 +549,8 @@
               <tr>
                 <th class="th-check">
                   <input type="checkbox" class="cell-checkbox"
-                    :checked="selectedSlots.size === channelListRows.length && channelListRows.length > 0"
-                    :indeterminate="selectedSlots.size > 0 && selectedSlots.size < channelListRows.length"
+                    :checked="selectedSlots.length === channelListRows.length && channelListRows.length > 0"
+                    :indeterminate="selectedSlots.length > 0 && selectedSlots.length < channelListRows.length"
                     @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
                   />
                 </th>
@@ -574,7 +574,7 @@
                 :key="idx"
                 :class="{
                   'row-dirty':     row.dirty,
-                  'row-selected':  selectedSlots.has(row.slot),
+                  'row-selected':  selectedSlots.includes(row.slot),
                   'row-drag-over': dragOverIdx === idx && dragSrcIdx !== idx,
                 }"
                 draggable="true"
@@ -585,7 +585,7 @@
               >
                 <td class="td-check">
                   <input type="checkbox" class="cell-checkbox"
-                    :checked="selectedSlots.has(row.slot)"
+                    :checked="selectedSlots.includes(row.slot)"
                     @change="toggleRowSelect(row.slot, ($event.target as HTMLInputElement).checked)"
                   />
                 </td>
@@ -1096,7 +1096,7 @@ const chListWriteDone = ref(0)
 const chListWriteTotal = ref(0)
 const chListScanFrom  = ref(1)
 const chListScanTo    = ref(999)
-const selectedSlots   = ref<Set<number>>(new Set())
+const selectedSlots   = ref<number[]>([])
 const chListDeleting  = ref(false)
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
@@ -2285,34 +2285,32 @@ function addNewChannel() {
 
 function deleteChannelRow(idx: number) {
   const slot = channelListRows.value[idx]?.slot
-  if (slot != null) selectedSlots.value.delete(slot)
+  if (slot != null) selectedSlots.value = selectedSlots.value.filter(s => s !== slot)
   channelListRows.value = channelListRows.value.filter((_, i) => i !== idx)
 }
 
 function toggleRowSelect(slot: number, checked: boolean) {
-  const s = new Set(selectedSlots.value)
-  checked ? s.add(slot) : s.delete(slot)
-  selectedSlots.value = s
+  selectedSlots.value = checked
+    ? [...selectedSlots.value, slot]
+    : selectedSlots.value.filter(s => s !== slot)
 }
 
 function toggleSelectAll(checked: boolean) {
-  selectedSlots.value = checked
-    ? new Set(channelListRows.value.map(r => r.slot))
-    : new Set()
+  selectedSlots.value = checked ? channelListRows.value.map(r => r.slot) : []
 }
 
 async function deleteSelectedFromRadio() {
-  if (chListDeleting.value || selectedSlots.value.size === 0) return
+  if (chListDeleting.value || selectedSlots.value.length === 0) return
   chListDeleting.value = true
   const slots = [...selectedSlots.value]
   try {
     for (const slot of slots) {
       await deleteMemorySlot(slot).catch((e: any) => { lastError.value = e.message })
     }
-    channelListRows.value = channelListRows.value.filter(r => !selectedSlots.value.has(r.slot))
-    selectedSlots.value = new Set()
+    channelListRows.value = channelListRows.value.filter(r => !slots.includes(r.slot))
     saveChannelList()
   } finally {
+    selectedSlots.value = []
     chListDeleting.value = false
   }
 }

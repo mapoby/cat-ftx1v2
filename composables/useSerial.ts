@@ -773,12 +773,12 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
 }
 
-// Blanks a memory slot: MW with P7=0 (VFO type) writes a non-channel entry, clearing the slot.
+// Blanks a memory slot by writing MW with P7=4 ("-"), the undefined/blank channel type.
+// P7=4 is the value the radio returns via MR for empty slots; writing it back marks the slot as unused.
 export async function deleteMemorySlot(slot: number): Promise<void> {
   const slotStr = String(slot).padStart(5, '0')
   // MW payload: slot(5) + freq(9) + clarDir(1) + clarOffset(4) + rxClar(1) + txClar(1) + mode(1) + P7(1) + sqlType(1) + P9(2) + shift(1) = 27 chars
-  // P7=0 marks this as a VFO-type entry, which blanks the memory slot on the radio.
-  const payload = slotStr + '029000000' + '+0000' + '00' + '2' + '0' + '0' + '00' + '0'
+  const payload = slotStr + '029000000' + '+0000' + '00' + '2' + '4' + '0' + '00' + '0'
   await send('MW' + payload)
   await new Promise(r => setTimeout(r, 150))
 }
