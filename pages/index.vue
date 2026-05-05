@@ -533,6 +533,11 @@
             :disabled="chListDeleting || !state.connected"
             @click="deleteSelectedFromRadio"
           >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.length})` }}</button>
+          <button
+            class="btn btn-sm btn-wipe chlist-action-btn"
+            :disabled="chListWiping || chListDeleting || !state.connected"
+            @click="wipeAllDialog = true"
+          >{{ chListWiping ? `Wiping…` : 'Wipe All Memory' }}</button>
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
           <button class="btn btn-sm" @click="rsgbDialog = true">+ Add from RSGB</button>
@@ -1006,6 +1011,26 @@
       </div>
     </Teleport>
 
+    <!-- ── Wipe All Memory confirmation dialog ── -->
+    <Teleport to="body">
+      <div v-if="wipeAllDialog" class="tone-modal-backdrop" @click.self="wipeAllDialog = false">
+        <div class="tone-modal wipe-confirm-modal" role="dialog" aria-modal="true" aria-label="Wipe All Memory">
+          <div class="tone-modal-header wipe-confirm-header">
+            <span class="tone-modal-title">⚠ WARNING</span>
+            <button class="tone-modal-close" @click="wipeAllDialog = false" aria-label="Close">✕</button>
+          </div>
+          <div class="wipe-confirm-body">
+            <p>This will overwrite <strong>all {{ channelListRows.length }} channels</strong> in radio memory with blank defaults (29 MHz, USB, no SQL, empty tag).</p>
+            <p>The radio has no delete command — slots will remain but contain no useful data. This cannot be undone.</p>
+          </div>
+          <div class="wipe-confirm-actions">
+            <button class="btn btn-sm" @click="wipeAllDialog = false">Cancel</button>
+            <button class="btn btn-sm btn-wipe" @click="wipeAllMemory">WIPE ALL</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -1098,6 +1123,8 @@ const chListScanFrom  = ref(1)
 const chListScanTo    = ref(999)
 const selectedSlots   = ref<number[]>([])
 const chListDeleting  = ref(false)
+const wipeAllDialog   = ref(false)
+const chListWiping    = ref(false)
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
 const csvImportRef    = ref<HTMLInputElement | null>(null)
@@ -2312,6 +2339,23 @@ async function deleteSelectedFromRadio() {
   } finally {
     selectedSlots.value = []
     chListDeleting.value = false
+  }
+}
+
+async function wipeAllMemory() {
+  if (chListWiping.value || !channelListRows.value.length) return
+  chListWiping.value = true
+  wipeAllDialog.value = false
+  const slots = channelListRows.value.map(r => r.slot)
+  try {
+    for (const slot of slots) {
+      await deleteMemorySlot(slot).catch((e: any) => { lastError.value = e.message })
+    }
+    channelListRows.value = []
+    selectedSlots.value = []
+    saveChannelList()
+  } finally {
+    chListWiping.value = false
   }
 }
 
@@ -4147,6 +4191,53 @@ body {
   color: #ef4444;
   border-color: #ef4444;
   background: rgba(239,68,68,.1);
+}
+
+.btn-wipe {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239,68,68,.08);
+}
+
+.btn-wipe:hover:not(:disabled) {
+  background: #ef4444;
+  color: #fff;
+}
+
+.wipe-confirm-modal {
+  width: 420px;
+  max-width: 90vw;
+}
+
+.wipe-confirm-header {
+  background: rgba(239,68,68,.15);
+}
+
+.wipe-confirm-header .tone-modal-title {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.wipe-confirm-body {
+  padding: 16px 20px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.wipe-confirm-body p {
+  margin: 0 0 10px;
+}
+
+.wipe-confirm-body p:last-child {
+  margin-bottom: 0;
+}
+
+.wipe-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
 }
 
 .chlist-empty {
