@@ -52,7 +52,7 @@
       </nav>
 
       <!-- ── Dashboard tab ── -->
-      <div v-show="activeTab === 'dashboard'">
+      <div v-show="activeTab === 'dashboard'" class="dashboard-inner">
 
       <!-- TX/RX Indicator + FUNC KNOB row -->
       <div class="txbar">
@@ -402,6 +402,23 @@
           </div>
         </section>
 
+        <!-- Presets panel -->
+        <section v-if="presets.length > 0" class="presets-section">
+          <div class="presets-header">
+            <span class="section-title">Presets</span>
+            <span class="presets-hint">Edit <code>cat-presets.json</code> to customize</span>
+          </div>
+          <div class="presets-grid">
+            <PresetButton
+              v-for="preset in presets"
+              :key="preset.id"
+              :preset="preset"
+              :connected="state.connected"
+              @executed="onPresetExecuted"
+            />
+          </div>
+        </section>
+
         <!-- Saved channels panel -->
         <section class="channels-panel">
           <div class="channels-header">
@@ -416,8 +433,8 @@
               :title="chSqlLabel(ch) ?? undefined"
               @click="applyChannel(ch)"
             >
-              <span class="ch-freq">{{ chLabel(ch) }}</span>
               <span v-if="chSqlLabel(ch)" class="ch-sql">{{ chSqlLabel(ch) }}</span>
+              <span class="ch-freq">{{ chLabel(ch) }}</span>
               <button class="ch-del" @click.stop="deleteChannel(ch.id)" title="Remove">×</button>
             </div>
           </div>
@@ -464,31 +481,15 @@
               v-for="ch in sortedRadioChannels"
               :key="ch.slot"
               class="ch-badge"
-              :title="`Slot ${ch.slot}`"
+              :title="ch.tag ? `${ch.tag} · Slot ${ch.slot}` : `Slot ${ch.slot}`"
               @click="recallRadioChannel(ch)"
             >
-              <span class="ch-freq">{{ radioChLabel(ch) }}</span>
-              <span v-if="ch.tag" class="ch-sql">{{ ch.tag }}</span>
+              <span class="ch-slot">{{ String(ch.slot).padStart(3, '0') }}</span>
+              <span v-if="radioChSqlLabel(ch)" class="ch-sql">{{ radioChSqlLabel(ch) }}</span>
+              <span class="ch-freq">{{ (ch.freq / 1_000_000).toFixed(3) }}{{ ch.mode ? ' ' + ch.mode : '' }}</span>
             </div>
           </div>
           <div v-else class="channels-empty">{{ state.connected ? 'Press Scan to read radio memory' : 'Connect to use radio memory' }}</div>
-        </section>
-
-        <!-- Presets panel -->
-        <section v-if="presets.length > 0" class="presets-section">
-          <div class="presets-header">
-            <span class="section-title">Presets</span>
-            <span class="presets-hint">Edit <code>cat-presets.json</code> to customize</span>
-          </div>
-          <div class="presets-grid">
-            <PresetButton
-              v-for="preset in presets"
-              :key="preset.id"
-              :preset="preset"
-              :connected="state.connected"
-              @executed="onPresetExecuted"
-            />
-          </div>
         </section>
 
       </div>
@@ -2606,6 +2607,19 @@ function chSqlLabel(ch: ChannelConfig): string | null {
   return sqlTypeLabel(ch.sqlType)
 }
 
+function radioChSqlLabel(ch: RadioChannel): string | null {
+  if (!ch.sqlType) return null
+  if (ch.sqlType === 1 || ch.sqlType === 2) {
+    const hz = ch.ctcssIdx !== null ? CTCSS_TONES[ch.ctcssIdx]?.toFixed(1) : null
+    return hz ? `${sqlTypeLabel(ch.sqlType)} ${hz}Hz` : sqlTypeLabel(ch.sqlType)
+  }
+  if (ch.sqlType === 3) {
+    const code = ch.dcsIdx !== null ? DCS_CODES[ch.dcsIdx] : null
+    return code != null ? `DCS D${String(code).padStart(3, '0')}` : 'DCS'
+  }
+  return sqlTypeLabel(ch.sqlType)
+}
+
 // ----------- lifecycle -----------
 
 watch(channelListRows, saveChannelList, { deep: true })
@@ -2841,6 +2855,12 @@ body {
 
 @keyframes blink {
   50% { opacity: .4; }
+}
+
+.dashboard-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* ── VFO section ── */
@@ -3325,6 +3345,13 @@ body {
 .ch-badge:hover {
   border-color: #f97316;
   background: rgba(249, 115, 22, .08);
+}
+
+.ch-slot {
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .ch-freq {
