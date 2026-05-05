@@ -2403,9 +2403,11 @@ async function writeAllToRadio() {
   chListWriteTotal.value = dirty.length
   try {
     for (const row of dirty) {
+      // MR P8: 1=ENC/DEC, 2=ENC  →  CT P2: 1=ENC, 2=ENC/DEC  (swap 1↔2)
+      const ctSqlType = row.sqlType === 1 ? 2 : row.sqlType === 2 ? 1 : row.sqlType
       await writeMemoryChannel(row.slot, {
         freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
-        mode: row.mode, sqlType: row.sqlType,
+        mode: row.mode, sqlType: ctSqlType,
         ctcssIdx: row.ctcssIdx, dcsIdx: row.dcsIdx,
         clarDir: row.clarDir, clarOffset: row.clarOffset,
         rxClar: row.rxClar, txClar: row.txClar,
