@@ -773,14 +773,21 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   }
 }
 
-// Blanks a memory slot by writing MW with P7=4 ("-"), the undefined/blank channel type.
-// P7=4 is the value the radio returns via MR for empty slots; writing it back marks the slot as unused.
+// FTX-1 CAT has no per-slot delete command (MW only accepts P7=1; P7=0/4 return ?;).
+// Best available: overwrite the slot with blank defaults (29 MHz, USB, no SQL, empty tag).
+// The slot stays in radio memory but with no useful content.
 export async function deleteMemorySlot(slot: number): Promise<void> {
   const slotStr = String(slot).padStart(5, '0')
-  // MW payload: slot(5) + freq(9) + clarDir(1) + clarOffset(4) + rxClar(1) + txClar(1) + mode(1) + P7(1) + sqlType(1) + P9(2) + shift(1) = 27 chars
-  const payload = slotStr + '029000000' + '+0000' + '00' + '2' + '4' + '0' + '00' + '0'
-  await send('MW' + payload)
+  await send('VM000')
+  await send('FA029000000')
+  await send('MD02')
+  await send('CT00')
+  await send('MC0' + slotStr)
+  await send('VM000')
+  await send('AM')
   await new Promise(r => setTimeout(r, 150))
+  await send('MZ' + slotStr + '0029000000')
+  await send('MT' + slotStr + '            ')
 }
 
 /** Composable entry-point — returns the singleton controller. */
