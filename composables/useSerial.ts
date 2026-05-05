@@ -765,6 +765,7 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   await send('MC0' + slotStr)
   await send('VM000')
   await send('AM')
+  await new Promise(r => setTimeout(r, 150))
   await send('MZ' + slotStr + splitBit + txFreqStr)
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
