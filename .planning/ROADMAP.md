@@ -28,7 +28,15 @@
   3. Memory channel scan completes and the radio VFO is left on the frequency it had before the scan started, even if the scan errors mid-run
   4. `toggleRfSql()` executes without throwing and does not require `preAmpHf` to be non-null
   5. `readMemoryChannel()` reads CTCSS/DCS tone from the command response, not from stale global state
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Extract catParser.ts + export defaultState (TEST-01, TEST-03)
+- [ ] 01-02-PLAN.md — Install Vitest, create vitest.config.mts, add npm test scripts (TEST-04 infra, TEST-05 infra)
+- [ ] 01-03-PLAN.md — Write 40+ opcode tests in catParser.test.ts (TEST-02)
+- [ ] 01-04-PLAN.md — Fix BUG-01 (VFO save/restore), BUG-02 (stale CN state), BUG-04 (AI mode in scan)
+- [ ] 01-05-PLAN.md — Fix BUG-03 (toggleRfSql busy flag), BUG-05 (tab switch AI mode)
+- [ ] 01-06-PLAN.md — Wire CI test gate + coverage artifact (TEST-04, TEST-05)
 
 ### Phase 2: Browser Compatibility + Error Surface
 **Goal**: Users on unsupported browsers see a clear blocking message before the app loads, and users on Chrome see actionable errors when the radio does not respond
@@ -72,7 +80,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Testing Foundation + Bug Fixes | 0/? | Not started | - |
+| 1. Testing Foundation + Bug Fixes | 0/6 | Not started | - |
 | 2. Browser Compatibility + Error Surface | 0/? | Not started | - |
 | 3. Data Integrity — Memory Operations | 0/? | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
