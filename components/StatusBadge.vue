@@ -5,7 +5,7 @@
     :style="badgeStyle"
     :role="clickable ? 'button' : undefined"
     :tabindex="clickable ? 0 : undefined"
-    :title="clickable ? (active ? `Wyłącz ${label}` : `Włącz ${label}`) : undefined"
+    :title="clickable ? (active ? `Turn off ${label}` : `Turn on ${label}`) : undefined"
     @click="clickable && !busy && emit('toggle')"
     @keydown.enter.space.prevent="clickable && !busy && emit('toggle')"
   >
