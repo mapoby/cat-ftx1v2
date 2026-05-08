@@ -281,6 +281,9 @@ async function _enableAutoInfo(): Promise<void> {
   }
 }
 
+// Must only be called after _enableAutoInfo() has completed — these are query
+// commands whose responses arrive as unsolicited AI frames. Calling before AI
+// mode is confirmed active will silently lose the responses.
 async function _initialSync(): Promise<void> {
   for (const cmd of ['FA','FB','MD0','MD1','TX','ST','GT0','GT1','AG0','AG1','RG0','RG1','PC','RI0','FR','FT','SS04']) {
     if (!_port) break
@@ -412,6 +415,7 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
       if (sqlType > 0) {
         let ctcssIdx: number | null = null
         let dcsIdx: number | null = null
+        // CN0x always queries VFO 0 (main); channel recall uses MC0 so this is consistent.
         if (sqlType <= 2) {
           try {
             const resp = await _sendAndWait('CN00', 1000)
@@ -437,8 +441,11 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
 }
 
 export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
-  const origFreqResp = await _sendAndWait('FA', 1500)
-  const origFreq = origFreqResp.substring(2)
+  let origFreq = ''
+  try {
+    const resp = await _sendAndWait('FA', 1500)
+    origFreq = resp.substring(2)
+  } catch { /* proceed without restore if FA query fails */ }
 
   try { await _sendAndWait('AI0', 1000) } catch { }
 
@@ -451,7 +458,7 @@ export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
   } finally {
     try {
       await send('VM000')
-      await send('FA' + origFreq)
+      if (origFreq) await send('FA' + origFreq)
     } catch { }
     try { await _sendAndWait('AI1', 1000) } catch { }
   }
