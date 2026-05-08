@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 1 — Testing Foundation + Bug Fixes
 
 ## Status
-Ready to execute
+Executing — Plan 01 complete
 
 ## Phases
 
@@ -23,7 +23,7 @@ Ready to execute
 
 ## Performance Metrics
 
-- Plans completed: 0
+- Plans completed: 1
 - Requirements delivered: 0/23
 - Phases completed: 0/4
 
@@ -33,6 +33,8 @@ Ready to execute
 - Extract `_parseResponse` into `composables/catParser.ts` with pure function signature before writing any tests
 - Use Vitest (not Jest) — ships with Nuxt 3 / Vite ecosystem
 - `package.json` needs `"type": "module"` or vitest config must be named `.mts`
+- MODE_CODE must be imported alongside parseResponse in useSerial.ts (writeMemoryChannel uses it)
+- Use `!= null` (not `!== undefined`) to narrow `number | null` to `number` for _fireScopeRequery
 
 ### Blockers
 None
@@ -42,8 +44,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 1, 6 plans created (01-01 through 01-06), ready to execute
-Next action: `/gsd-execute-phase 1`
+Resume from: Phase 1, Plan 02 (Vitest wiring)
+Next action: Execute 01-02-PLAN.md
 
 ## Last Updated
 2026-05-08
