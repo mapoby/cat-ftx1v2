@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 1 — Testing Foundation + Bug Fixes
 
 ## Status
-Executing — Plan 03 complete
+Executing — Plan 04 complete
 
 ## Phases
 
@@ -38,6 +38,9 @@ Executing — Plan 03 complete
 - Each toggle function owns its own busy flag — no shared flags between unrelated toggles
 - Tab lifecycle sends AI0 (disable auto-info) on entry to channels tab, AI1 on exit
 - TX gate during scan via existing connected/clickable props — no new component props needed
+- scanMemoryChannels disables AI mode (AI0) before bulk read and re-enables (AI1) in finally — BUG-04
+- VFO frequency saved via _sendAndWait('FA') and restored in finally block — BUG-01
+- readMemoryChannel parses CN resp.substring(4) directly, not from global state — BUG-02
 
 ### Blockers
 None
@@ -47,8 +50,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 1, Plan 04 (next plan)
-Next action: Execute 01-04-PLAN.md
+Resume from: Phase 1, Plan 06 (next plan — 05 already complete)
+Next action: Execute 01-06-PLAN.md
 
 ## Last Updated
 2026-05-08
