@@ -32,7 +32,7 @@
 
 Plans:
 - [x] 01-01-PLAN.md — Extract catParser.ts + export defaultState (TEST-01, TEST-03)
-- [ ] 01-02-PLAN.md — Install Vitest, create vitest.config.mts, add npm test scripts (TEST-04 infra, TEST-05 infra)
+- [x] 01-02-PLAN.md — Install Vitest, create vitest.config.mts, add npm test scripts (TEST-04 infra, TEST-05 infra)
 - [ ] 01-03-PLAN.md — Write 40+ opcode tests in catParser.test.ts (TEST-02)
 - [ ] 01-04-PLAN.md — Fix BUG-01 (VFO save/restore), BUG-02 (stale CN state), BUG-04 (AI mode in scan)
 - [ ] 01-05-PLAN.md — Fix BUG-03 (toggleRfSql busy flag), BUG-05 (tab switch AI mode)
@@ -80,7 +80,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Testing Foundation + Bug Fixes | 1/6 | In progress | - |
+| 1. Testing Foundation + Bug Fixes | 2/6 | In progress | - |
 | 2. Browser Compatibility + Error Surface | 0/? | Not started | - |
 | 3. Data Integrity — Memory Operations | 0/? | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
