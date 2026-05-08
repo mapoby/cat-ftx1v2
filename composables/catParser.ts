@@ -38,8 +38,8 @@ export function parseResponse(
   const ch: Partial<TransceiverState> = {}
 
   switch (cmd) {
-    case 'FA': ch.mainFreq = parseInt(params, 10) || null; break
-    case 'FB': ch.subFreq  = parseInt(params, 10) || null; break
+    case 'FA': { const v = parseInt(params, 10); ch.mainFreq = (!isNaN(v) && v > 0) ? v : null; break }
+    case 'FB': { const v = parseInt(params, 10); ch.subFreq  = (!isNaN(v) && v > 0) ? v : null; break }
 
     case 'FD': {
       ch.scopeSide = params[0] === '1' ? 1 : 0
@@ -91,8 +91,8 @@ export function parseResponse(
       else if (params[0] === '1') ch.sqSub  = parseInt(params.substring(1), 10)
       break
 
-    case 'PC': ch.powerLevel = parseInt(params.substring(1), 10) || null; break
-    case 'AO': ch.amcLevel   = parseInt(params, 10) || null; break
+    case 'PC': { const v = parseInt(params.substring(1), 10); ch.powerLevel = isNaN(v) ? null : v; break }
+    case 'AO': { const v = parseInt(params, 10); ch.amcLevel = isNaN(v) ? null : v; break }
     case 'MG': ch.micGain    = parseInt(params, 10); break
 
     case 'PR':
@@ -108,7 +108,7 @@ export function parseResponse(
       else if (params[0] === '2') ch.subSmeter = parseInt(params.substring(1, 4), 10)
       else if (params[0] === '0') {
         ch.mainSmeter = parseInt(params.substring(1, 4), 10)
-        ch.subSmeter  = parseInt(params.substring(4, 8), 10)
+        ch.subSmeter  = parseInt(params.substring(4, 7), 10)
       }
       break
 
@@ -192,9 +192,11 @@ export function parseResponse(
 
     case 'CT': {
       const vfo = sourceCmd ? sourceCmd[2] : params[0]
-      const sqlType = parseInt(params[1] ?? params[0], 10)
-      if (vfo === '0') ch.mainSqlType = isNaN(sqlType) ? null : sqlType
-      else if (vfo === '1') ch.subSqlType  = isNaN(sqlType) ? null : sqlType
+      const sqlType = parseInt(params[1], 10)
+      if (!isNaN(sqlType)) {
+        if (vfo === '0') ch.mainSqlType = sqlType
+        else if (vfo === '1') ch.subSqlType = sqlType
+      }
       break
     }
 
@@ -215,7 +217,7 @@ export function parseResponse(
 
     case 'SH': {
       const vfo = sourceCmd ? sourceCmd[2] : params[0]
-      const idx = parseInt(params.substring(2, 4), 10)
+      const idx = parseInt(params.substring(1, 3), 10)
       if (vfo === '0') ch.mainBandwidth = isNaN(idx) ? null : idx
       else if (vfo === '1') ch.subBandwidth  = isNaN(idx) ? null : idx
       break

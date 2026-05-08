@@ -210,9 +210,9 @@ describe('PC — power level', () => {
     const delta = parseResponse('PC', '1100', base())
     expect(delta.powerLevel).toBe(100)
   })
-  test('returns null for zero', () => {
+  test('returns 0 for zero power (valid value)', () => {
     const delta = parseResponse('PC', '1000', base())
-    expect(delta.powerLevel).toBeNull()
+    expect(delta.powerLevel).toBe(0)
   })
 })
 
@@ -223,9 +223,9 @@ describe('AO — AMC level', () => {
     const delta = parseResponse('AO', '50', base())
     expect(delta.amcLevel).toBe(50)
   })
-  test('returns null for zero', () => {
+  test('returns 0 for zero AMC level (valid value)', () => {
     const delta = parseResponse('AO', '0', base())
-    expect(delta.amcLevel).toBeNull()
+    expect(delta.amcLevel).toBe(0)
   })
 })
 
@@ -290,7 +290,7 @@ describe('VG — VOX gain', () => {
 
 describe('RM — reading meter', () => {
   test('mode 0 sets both mainSmeter and subSmeter', () => {
-    const delta = parseResponse('RM', '001502030', base())
+    const delta = parseResponse('RM', '0015203', base())
     expect(delta.mainSmeter).toBe(15)
     expect(delta.subSmeter).toBe(203)
   })
@@ -549,16 +549,16 @@ describe('CN — CTCSS/DCS code', () => {
 
 describe('SH — bandwidth', () => {
   test('sourceCmd SH0 sets mainBandwidth', () => {
-    const delta = parseResponse('SH', '0012', base(), 'SH0')
+    const delta = parseResponse('SH', '012', base(), 'SH0')
     expect(delta.mainBandwidth).toBe(12)
     expect(delta.subBandwidth).toBeUndefined()
   })
   test('sourceCmd SH1 sets subBandwidth', () => {
-    const delta = parseResponse('SH', '1008', base(), 'SH1')
+    const delta = parseResponse('SH', '108', base(), 'SH1')
     expect(delta.subBandwidth).toBe(8)
   })
   test('no sourceCmd, params[0]=1 sets subBandwidth', () => {
-    const delta = parseResponse('SH', '1005', base())
+    const delta = parseResponse('SH', '105', base())
     expect(delta.subBandwidth).toBe(5)
   })
 })
