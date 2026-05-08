@@ -195,11 +195,10 @@
             </span>
             </div>
           </div>
-          <template v-if="state.rxMode === 'dual' || state.txVfo === 1">
-          <SMeter :value="state.subSmeter" label="SUB S-meter" />
-          <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.subMode)))" :value="state.sqSub" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
+          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.subSmeter : null" label="SUB S-meter" />
+          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.afGainSub : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.rfGainSub : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.subMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.sqSub : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
           <br/>
           <section class="status-section">
             <StatusBadge label="AGC" :value="state.agcSub ?? '--'" :active="state.agcSub !== null && state.agcSub !== 'OFF'" color-active="#10b981" :clickable="state.agcSub !== null" :busy="agcBusy" @toggle="cycleAgc('1')" />
@@ -212,7 +211,6 @@
             <StatusBadge label="DCS" :value="state.subDcsCode != null ? ('D' + String(DCS_CODES[state.subDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '1'" @toggle="openDcsPopup('1')" />
             <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.subFreq !== null" @toggle="saveChannelFromVfo('1')" />
           </section>
-          </template>
         </div>
 
         <!-- MAIN VFO -->
@@ -273,10 +271,10 @@
               </span>
             </div>
           </div>
-          <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
-          <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.mainMode))" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.mainMode)))" :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
+          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.mainSmeter : null" label="MAIN S-meter" />
+          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.afGainMain : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.mainMode))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.rfGainMain : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.mainMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.sqMain : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
           <br/>
           <section class="status-section">
             <StatusBadge label="AGC" :value="state.agcMain ?? '--'" :active="state.agcMain !== null && state.agcMain !== 'OFF'" color-active="#10b981" :clickable="state.agcMain !== null" :busy="agcBusy" @toggle="cycleAgc('0')" />
