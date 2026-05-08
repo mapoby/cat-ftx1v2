@@ -8,7 +8,7 @@
 ### Testing
 
 - [ ] **TEST-01**: CAT protocol parsing logic is extracted into a pure function module (`catParser.ts`) with no Vue or Web Serial dependencies
-- [ ] **TEST-02**: `parseResponse()` is unit tested with Vitest covering all 30+ CAT opcodes including edge cases
+- [x] **TEST-02**: `parseResponse()` is unit tested with Vitest covering all 30+ CAT opcodes including edge cases
 - [ ] **TEST-03**: `defaultState()` is exported from `useSerial.ts` so tests can construct a valid base state without duplication
 - [ ] **TEST-04**: Vitest runs in CI (GitHub Actions) before the Docker build step and fails the build on test failure
 - [ ] **TEST-05**: Test coverage report is generated and available in CI artifacts
@@ -80,7 +80,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Complete |
 | TEST-03 | Phase 1 | Pending |
 | TEST-04 | Phase 1 | Pending |
 | TEST-05 | Phase 1 | Pending |
