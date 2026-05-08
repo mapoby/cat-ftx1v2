@@ -4,6 +4,7 @@
     <div
       class="level-track"
       :class="{ 'level-track--clickable': clickable }"
+      :title="title"
       @click="clickable ? handleClick($event) : undefined"
       @wheel.prevent="wheelable ? handleWheel($event) : undefined"
     >
@@ -27,6 +28,7 @@ const props = defineProps<{
   color?: string
   clickable?: boolean
   wheelable?: boolean
+  title?: string
 }>()
 
 const emit = defineEmits<{

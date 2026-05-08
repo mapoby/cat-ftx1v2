@@ -9,12 +9,12 @@
       </div>
 
       <div class="conn-bar">
-        <select v-if="knownPorts.length" v-model.number="selectedPortIdx" class="sel port-sel" :disabled="state.connected">
+        <select v-if="knownPorts.length" v-model.number="selectedPortIdx" class="sel port-sel" :disabled="state.connected" title="Select serial port">
           <option :value="-1">Pick port…</option>
           <option v-for="(p, i) in knownPorts" :key="i" :value="i">{{ portLabel(p, i) }}</option>
         </select>
 
-        <select v-model="selectedBaud" class="sel baud-sel" :disabled="state.connected">
+        <select v-model="selectedBaud" class="sel baud-sel" :disabled="state.connected" title="Baud rate — must match radio CAT speed setting">
           <option :value="4800">4800</option>
           <option :value="9600">9600</option>
           <option :value="19200">19200</option>
@@ -22,7 +22,7 @@
           <option :value="115200">115200</option>
         </select>
 
-        <button class="btn" :class="state.connected ? 'btn-danger' : 'btn-primary'" @click="toggleConnection" :disabled="connecting">
+        <button class="btn" :class="state.connected ? 'btn-danger' : 'btn-primary'" @click="toggleConnection" :disabled="connecting" :title="state.connected ? 'Disconnect from radio' : 'Connect to radio via Web Serial'">
           {{ connecting ? '…' : state.connected ? 'Disconnect' : 'Connect' }}
         </button>
       </div>
@@ -39,7 +39,7 @@
     <!-- ── Error banner ── -->
     <div v-if="lastError" class="error-banner">
       {{ lastError }}
-      <button class="close-btn" @click="lastError = null">✕</button>
+      <button class="close-btn" @click="lastError = null" title="Dismiss error">✕</button>
     </div>
 
     <!-- ── Main dashboard (only when connected) ── -->
@@ -47,8 +47,8 @@
 
       <!-- ── Tab bar ── -->
       <nav class="tab-bar">
-        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">Dashboard</button>
-        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'channels' }" @click="activeTab = 'channels'">Channel List</button>
+        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'dashboard' }" @click="activeTab = 'dashboard'" title="VFO controls, spectrum scope, presets">Dashboard</button>
+        <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'channels' }" @click="activeTab = 'channels'" title="Read, edit and write memory channels">Channel List</button>
       </nav>
 
       <!-- ── Dashboard tab ── -->
@@ -155,19 +155,21 @@
           <div class="vfo-header">
             <span class="vfo-label">SUB</span>
             <span v-if="state.txVfo === 1" class="tx-vfo-badge">TX/RX</span>
-            <span v-else class="rx-vfo-badge" @click="switchToVfo('1')">RX</span>
-            <button v-if="state.txVfo === 1" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendUp()">Up</button>
-            <button v-if="state.txVfo === 1" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendDn()">Dn</button>
+            <span v-else class="rx-vfo-badge" @click="switchToVfo('1')" title="Switch TX to SUB VFO">RX</span>
+            <button v-if="state.txVfo === 1" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendUp()" title="Step frequency up">Up</button>
+            <button v-if="state.txVfo === 1" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendDn()" title="Step frequency down">Dn</button>
             <button
               class="band-sel"
               :disabled="bandBusy || state.txState || state.mox"
               @click="openBandPopup('1')"
+              title="Select band for SUB VFO"
             >{{ subBandCode != null ? BANDS.find(b => b.code === subBandCode)?.label : 'band…' }}</button>
             <button
               class="mode-sel"
               :style="modeBadgeStyle(state.subMode)"
               :disabled="modeBusy || state.txState || state.mox"
               @click="openModePopup('1')"
+              title="Select modulation mode for SUB VFO"
             >{{ state.subMode ?? '--' }}</button>
           </div>
           <div class="freq-row">
@@ -195,21 +197,21 @@
             </span>
             </div>
           </div>
-          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.subSmeter : null" label="SUB S-meter" />
-          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.afGainSub : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.rfGainSub : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.subMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.sqSub : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" />
+          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.subSmeter : null" label="SUB S-meter" title="SUB VFO received signal strength" />
+          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.afGainSub : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" title="SUB VFO audio output level — click or scroll to adjust" />
+          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.rfGainSub : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" title="SUB VFO RF gain — click to set" />
+          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.subMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 1) ? state.sqSub : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('1', $event)" title="SUB VFO squelch threshold — click to set" />
           <br/>
           <section class="status-section">
-            <StatusBadge label="AGC" :value="state.agcSub ?? '--'" :active="state.agcSub !== null && state.agcSub !== 'OFF'" color-active="#10b981" :clickable="state.agcSub !== null" :busy="agcBusy" @toggle="cycleAgc('1')" />
-            <StatusBadge label="NARROW" :value="state.narrowSub != null ? (state.narrowSub ? 'ON' : 'OFF') : '--'" :active="state.narrowSub === true" color-active="#a78bfa" :clickable="state.narrowSub !== null" :busy="narrowBusy" @toggle="toggleNarrow('1')" />
-            <div class="dnr-wrap" :class="{ 'dnr-wrap--active': isDnrMode(state.subMode) }" @wheel.prevent="onDnrWheel('1', $event)">
+            <StatusBadge label="AGC" :value="state.agcSub ?? '--'" :active="state.agcSub !== null && state.agcSub !== 'OFF'" color-active="#10b981" :clickable="state.agcSub !== null" :busy="agcBusy" @toggle="cycleAgc('1')" title="SUB VFO automatic gain control — click to cycle OFF / FAST / MID / SLOW" />
+            <StatusBadge label="NARROW" :value="state.narrowSub != null ? (state.narrowSub ? 'ON' : 'OFF') : '--'" :active="state.narrowSub === true" color-active="#a78bfa" :clickable="state.narrowSub !== null" :busy="narrowBusy" @toggle="toggleNarrow('1')" title="SUB VFO narrow filter — click to toggle" />
+            <div class="dnr-wrap" :class="{ 'dnr-wrap--active': isDnrMode(state.subMode) }" @wheel.prevent="onDnrWheel('1', $event)" title="SUB VFO digital noise reduction — scroll to adjust level">
               <StatusBadge label="DNR" :value="state.dnrSub != null ? String(state.dnrSub) : '--'" :active="isDnrMode(state.subMode) && state.dnrSub != null && state.dnrSub !== 'OFF' && state.dnrSub !== 0" color-active="#22d3ee" />
             </div>
-            <StatusBadge label="Tone SQL" :value="state.subSqlType != null ? sqlTypeLabel(state.subSqlType) : '--'" :active="state.subSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('1', state.subSqlType)" />
-            <StatusBadge label="CTCSS" :value="state.subCtcssTone != null ? (CTCSS_TONES[state.subCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '1'" @toggle="openCtcssPopup('1')" />
-            <StatusBadge label="DCS" :value="state.subDcsCode != null ? ('D' + String(DCS_CODES[state.subDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '1'" @toggle="openDcsPopup('1')" />
-            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.subFreq !== null" @toggle="saveChannelFromVfo('1')" />
+            <StatusBadge label="Tone SQL" :value="state.subSqlType != null ? sqlTypeLabel(state.subSqlType) : '--'" :active="state.subSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('1', state.subSqlType)" title="SUB VFO tone squelch mode — click to cycle OFF / CTCSS / DCS / TONE" />
+            <StatusBadge label="CTCSS" :value="state.subCtcssTone != null ? (CTCSS_TONES[state.subCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '1'" @toggle="openCtcssPopup('1')" title="SUB VFO CTCSS tone frequency — click to select" />
+            <StatusBadge label="DCS" :value="state.subDcsCode != null ? ('D' + String(DCS_CODES[state.subDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '1'" @toggle="openDcsPopup('1')" title="SUB VFO DCS code — click to select" />
+            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.subFreq !== null" @toggle="saveChannelFromVfo('1')" title="Save current SUB VFO frequency to channel list" />
           </section>
         </div>
 
@@ -229,19 +231,21 @@
           <div class="vfo-header">
             <span class="vfo-label">MAIN</span>
             <span v-if="state.txVfo === 0" class="tx-vfo-badge">TX/RX</span>
-            <span v-else class="rx-vfo-badge"  @click="switchToVfo('0')">RX</span>
-            <button v-if="state.txVfo === 0" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendUp()">Up</button>
-            <button v-if="state.txVfo === 0" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendDn()">Dn</button>
+            <span v-else class="rx-vfo-badge"  @click="switchToVfo('0')" title="Switch TX to MAIN VFO">RX</span>
+            <button v-if="state.txVfo === 0" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendUp()" title="Step frequency up">Up</button>
+            <button v-if="state.txVfo === 0" class="band-sel btn-up" :disabled="state.txState || state.mox" @click="sendDn()" title="Step frequency down">Dn</button>
             <button
                 class="band-sel"
                 :disabled="bandBusy || state.txState || state.mox"
                 @click="openBandPopup('0')"
+                title="Select band for MAIN VFO"
             >{{ mainBandCode != null ? BANDS.find(b => b.code === mainBandCode)?.label : 'band…' }}</button>
             <button
                 class="mode-sel"
                 :style="modeBadgeStyle(state.mainMode)"
                 :disabled="modeBusy || state.txState || state.mox"
                 @click="openModePopup('0')"
+                title="Select modulation mode for MAIN VFO"
             >{{ state.mainMode ?? '--' }}</button>
           </div>
           <div class="freq-row">
@@ -271,21 +275,21 @@
               </span>
             </div>
           </div>
-          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.mainSmeter : null" label="MAIN S-meter" />
-          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.afGainMain : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.mainMode))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.rfGainMain : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.mainMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.sqMain : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
+          <SMeter :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.mainSmeter : null" label="MAIN S-meter" title="MAIN VFO received signal strength" />
+          <LevelBar :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.afGainMain : null" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" title="MAIN VFO audio output level — click or scroll to adjust" />
+          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.mainMode))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.rfGainMain : null" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" title="MAIN VFO RF gain — click to set" />
+          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.mainMode)))" :value="(state.rxMode === 'dual' || state.txVfo === 0) ? state.sqMain : null" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" title="MAIN VFO squelch threshold — click to set" />
           <br/>
           <section class="status-section">
-            <StatusBadge label="AGC" :value="state.agcMain ?? '--'" :active="state.agcMain !== null && state.agcMain !== 'OFF'" color-active="#10b981" :clickable="state.agcMain !== null" :busy="agcBusy" @toggle="cycleAgc('0')" />
-            <StatusBadge label="NARROW" :value="state.narrowMain != null ? (state.narrowMain ? 'ON' : 'OFF') : '--'" :active="state.narrowMain === true" color-active="#a78bfa" :clickable="state.narrowMain !== null" :busy="narrowBusy" @toggle="toggleNarrow('0')" />
-            <div class="dnr-wrap" :class="{ 'dnr-wrap--active': isDnrMode(state.mainMode) }" @wheel.prevent="onDnrWheel('0', $event)">
+            <StatusBadge label="AGC" :value="state.agcMain ?? '--'" :active="state.agcMain !== null && state.agcMain !== 'OFF'" color-active="#10b981" :clickable="state.agcMain !== null" :busy="agcBusy" @toggle="cycleAgc('0')" title="MAIN VFO automatic gain control — click to cycle OFF / FAST / MID / SLOW" />
+            <StatusBadge label="NARROW" :value="state.narrowMain != null ? (state.narrowMain ? 'ON' : 'OFF') : '--'" :active="state.narrowMain === true" color-active="#a78bfa" :clickable="state.narrowMain !== null" :busy="narrowBusy" @toggle="toggleNarrow('0')" title="MAIN VFO narrow filter — click to toggle" />
+            <div class="dnr-wrap" :class="{ 'dnr-wrap--active': isDnrMode(state.mainMode) }" @wheel.prevent="onDnrWheel('0', $event)" title="MAIN VFO digital noise reduction — scroll to adjust level">
               <StatusBadge label="DNR" :value="state.dnrMain != null ? String(state.dnrMain) : '--'" :active="isDnrMode(state.mainMode) && state.dnrMain != null && state.dnrMain !== 'OFF' && state.dnrMain !== 0" color-active="#22d3ee" />
             </div>
-            <StatusBadge label="Tone SQL" :value="state.mainSqlType != null ? sqlTypeLabel(state.mainSqlType) : '--'" :active="state.mainSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('0', state.mainSqlType)" />
-            <StatusBadge label="CTCSS" :value="state.mainCtcssTone != null ? (CTCSS_TONES[state.mainCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '0'" @toggle="openCtcssPopup('0')" />
-            <StatusBadge label="DCS" :value="state.mainDcsCode != null ? ('D' + String(DCS_CODES[state.mainDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '0'" @toggle="openDcsPopup('0')" />
-            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.mainFreq !== null" @toggle="saveChannelFromVfo('0')" />
+            <StatusBadge label="Tone SQL" :value="state.mainSqlType != null ? sqlTypeLabel(state.mainSqlType) : '--'" :active="state.mainSqlType>0" color-active="#10b981" :clickable="true" :busy="sqlTypeBusy" @toggle="cycleSqlType('0', state.mainSqlType)" title="MAIN VFO tone squelch mode — click to cycle OFF / CTCSS / DCS / TONE" />
+            <StatusBadge label="CTCSS" :value="state.mainCtcssTone != null ? (CTCSS_TONES[state.mainCtcssTone]?.toFixed(1) + ' Hz') : '--'" :clickable="true" :active="ctcssPopupVfo === '0'" @toggle="openCtcssPopup('0')" title="MAIN VFO CTCSS tone frequency — click to select" />
+            <StatusBadge label="DCS" :value="state.mainDcsCode != null ? ('D' + String(DCS_CODES[state.mainDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '0'" @toggle="openDcsPopup('0')" title="MAIN VFO DCS code — click to select" />
+            <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.mainFreq !== null" @toggle="saveChannelFromVfo('0')" title="Save current MAIN VFO frequency to channel list" />
           </section>
         </div>
 
@@ -293,36 +297,36 @@
 
       <!-- ── Status Grid ── -->
       <section class="status-section">
-        <StatusBadge label="RX MODE" :value="state.rxMode?.toUpperCase() ?? '--'" :active="state.rxMode === 'dual'" color-active="#10b981" :clickable="state.rxMode !== null" :busy="rxModeBusy" @toggle="toggleRxMode" />
-        <StatusBadge label="SPLIT" :value="state.split ? 'ON' : 'OFF'" :active="state.split" :clickable="true" :busy="splitBusy" @toggle="toggleSplit" />
-        <StatusBadge label="MOX" :value="state.mox ? 'ON' : 'OFF'" :active="state.mox" color-active="#ef4444" :clickable="!radioMemScanning" :busy="moxBusy" @toggle="toggleMox" />
-        <StatusBadge label="LOCK" :value="state.lock != null ? (state.lock ? 'ON' : 'OFF') : '--'" :active="state.lock === true" color-active="#f59e0b" :clickable="state.lock !== null" :busy="lockBusy" @toggle="toggleLock" />
-        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.powerLevel != null }" @wheel.prevent="onPwrWheel">
+        <StatusBadge label="RX MODE" :value="state.rxMode?.toUpperCase() ?? '--'" :active="state.rxMode === 'dual'" color-active="#10b981" :clickable="state.rxMode !== null" :busy="rxModeBusy" @toggle="toggleRxMode" title="Receive mode — click to toggle SINGLE / DUAL VFO receive" />
+        <StatusBadge label="SPLIT" :value="state.split ? 'ON' : 'OFF'" :active="state.split" :clickable="true" :busy="splitBusy" @toggle="toggleSplit" title="Split operation — TX on SUB VFO, RX on MAIN VFO — click to toggle" />
+        <StatusBadge label="MOX" :value="state.mox ? 'ON' : 'OFF'" :active="state.mox" color-active="#ef4444" :clickable="!radioMemScanning" :busy="moxBusy" @toggle="toggleMox" title="Manual transmit — click to toggle TX on / off" />
+        <StatusBadge label="LOCK" :value="state.lock != null ? (state.lock ? 'ON' : 'OFF') : '--'" :active="state.lock === true" color-active="#f59e0b" :clickable="state.lock !== null" :busy="lockBusy" @toggle="toggleLock" title="Dial lock — prevents accidental frequency changes — click to toggle" />
+        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.powerLevel != null }" @wheel.prevent="onPwrWheel" title="TX output power in watts — scroll to adjust">
           <StatusBadge label="PWR" :value="state.powerLevel != null ? state.powerLevel + ' W' : '--'" />
         </div>
-        <StatusBadge label="SWAP" :value="'<->'" :active="false" :clickable="true" :busy="splitBusy" @toggle="toggleSwap"  />
-        <StatusBadge label="TUNER" :value="state.radioInfo?.tuning ? 'TUNING' : 'IDLE'" :active="state.radioInfo?.tuning" />
-        <StatusBadge label="SQL/RF" :value="state.sqlRfMode != null ? (['RF','SQL','SQL FM'][state.sqlRfMode] ?? '--') : '--'" :clickable="true" @toggle="toggleRfSql" />
-        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.micGain != null }" @wheel.prevent="onMicGainWheel">
+        <StatusBadge label="SWAP" :value="'<->'" :active="false" :clickable="true" :busy="splitBusy" @toggle="toggleSwap" title="Swap MAIN and SUB VFO frequencies" />
+        <StatusBadge label="TUNER" :value="state.radioInfo?.tuning ? 'TUNING' : 'IDLE'" :active="state.radioInfo?.tuning" title="Antenna tuner status (read-only)" />
+        <StatusBadge label="SQL/RF" :value="state.sqlRfMode != null ? (['RF','SQL','SQL FM'][state.sqlRfMode] ?? '--') : '--'" :clickable="true" @toggle="toggleRfSql" title="RF gain / squelch knob assignment — click to cycle RF / SQUELCH / SQUELCH FM" />
+        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.micGain != null }" @wheel.prevent="onMicGainWheel" title="Microphone gain — scroll to adjust">
           <StatusBadge label="MIC GAIN" :value="state.micGain != null ? String(state.micGain) : '--'" />
         </div>
-        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.amcLevel != null }" @wheel.prevent="onAmcWheel">
+        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.amcLevel != null }" @wheel.prevent="onAmcWheel" title="Automatic microphone control level — scroll to adjust">
           <StatusBadge label="AMC" :value="state.amcLevel != null ? String(state.amcLevel) : '--'" />
         </div>
-        <StatusBadge label="MIC EQ" :value="speechProcLabel" :active="state.speechProc === true" color-active="#10b981" :clickable="state.speechProc !== null" :busy="speechProcBusy" @toggle="toggleSpeechProc" />
-        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.speechProcLevel != null }" @wheel.prevent="onProcLevelWheel">
+        <StatusBadge label="MIC EQ" :value="speechProcLabel" :active="state.speechProc === true" color-active="#10b981" :clickable="state.speechProc !== null" :busy="speechProcBusy" @toggle="toggleSpeechProc" title="Speech processor / parametric equaliser — click to toggle" />
+        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.speechProcLevel != null }" @wheel.prevent="onProcLevelWheel" title="Speech processor level — scroll to adjust">
           <StatusBadge label="PROC LEVEL" :value="state.speechProcLevel != null ? (state.speechProcLevel === 0 ? 'OFF' : String(state.speechProcLevel)) : '--'" />
         </div>
-        <StatusBadge label="VOX" :value="state.vox != null ? (state.vox ? 'ON' : 'OFF') : '--'" :active="state.vox === true" color-active="#10b981" :clickable="state.vox !== null" :busy="voxBusy" @toggle="toggleVox" />
-        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.voxGain != null }" @wheel.prevent="onVoxGainWheel">
+        <StatusBadge label="VOX" :value="state.vox != null ? (state.vox ? 'ON' : 'OFF') : '--'" :active="state.vox === true" color-active="#10b981" :clickable="state.vox !== null" :busy="voxBusy" @toggle="toggleVox" title="Voice-operated transmit — click to toggle" />
+        <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.voxGain != null }" @wheel.prevent="onVoxGainWheel" title="VOX sensitivity — scroll to adjust">
           <StatusBadge label="VOX GAIN" :value="state.voxGain != null ? String(state.voxGain) : '--'" />
         </div>
-        <StatusBadge label="ATT" :value="state.rfAttenuator ? 'ON' : 'OFF'" :active="state.rfAttenuator" color-active="#f59e0b" :clickable="attClickable" :busy="attBusy" @toggle="toggleAtt" />
-        <StatusBadge label="AMP HF/50MHz" :value="state.preAmpHf != null ? (['IPO','AMP1','AMP2'][state.preAmpHf] ?? '--') : '--'" :active="state.preAmpHf != null && state.preAmpHf > 0" color-active="#10b981" :clickable="state.preAmpHf !== null" :busy="preAmpBusy" @toggle="togglePreAmpHf" />
-        <StatusBadge label="AMP VHF" :value="state.preAmpVhf != null ? (state.preAmpVhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpVhf === true" color-active="#10b981" :clickable="state.preAmpVhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpVhf" />
-        <StatusBadge label="AMP UHF" :value="state.preAmpUhf != null ? (state.preAmpUhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpUhf === true" color-active="#10b981" :clickable="state.preAmpUhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpUhf" />
-        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="false ? 'ANT2' : 'ANT1'" :active="state.antSelect === 0" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect1" />
-        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="true ? 'ANT2' : 'ANT1'" :active="state.antSelect === 1" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect2" />
+        <StatusBadge label="ATT" :value="state.rfAttenuator ? 'ON' : 'OFF'" :active="state.rfAttenuator" color-active="#f59e0b" :clickable="attClickable" :busy="attBusy" @toggle="toggleAtt" title="RF attenuator — reduces input signal by ~20 dB — click to toggle" />
+        <StatusBadge label="AMP HF/50MHz" :value="state.preAmpHf != null ? (['IPO','AMP1','AMP2'][state.preAmpHf] ?? '--') : '--'" :active="state.preAmpHf != null && state.preAmpHf > 0" color-active="#10b981" :clickable="state.preAmpHf !== null" :busy="preAmpBusy" @toggle="togglePreAmpHf" title="HF / 50 MHz preamplifier — click to cycle IPO / AMP1 / AMP2" />
+        <StatusBadge label="AMP VHF" :value="state.preAmpVhf != null ? (state.preAmpVhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpVhf === true" color-active="#10b981" :clickable="state.preAmpVhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpVhf" title="VHF preamplifier — click to toggle" />
+        <StatusBadge label="AMP UHF" :value="state.preAmpUhf != null ? (state.preAmpUhf ? 'ON' : 'OFF') : '--'" :active="state.preAmpUhf === true" color-active="#10b981" :clickable="state.preAmpUhf !== null" :busy="preAmpBusy" @toggle="togglePreAmpUhf" title="UHF preamplifier — click to toggle" />
+        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="false ? 'ANT2' : 'ANT1'" :active="state.antSelect === 0" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect1" title="HF antenna 1 — click to select ANT1" />
+        <StatusBadge v-if="state.firmware?.spa1 !== null" label="HF ANT" :value="true ? 'ANT2' : 'ANT1'" :active="state.antSelect === 1" color-active="#a78bfa" :clickable="state.antSelect !== null" :busy="antSelectBusy" @toggle="toggleAntSelect2" title="HF antenna 2 — click to select ANT2" />
       </section>
 
       <!-- ── Bottom panels row ── -->
@@ -335,7 +339,7 @@
           <!-- LEVEL bar (bipolar: -30…+30, step 0.5) -->
           <div class="scope-level-row">
             <span class="scope-level-lbl">LEVEL</span>
-            <div class="scope-level-track" @click="onScopeLevelClick">
+            <div class="scope-level-track" @click="onScopeLevelClick" title="Spectrum scope reference level — click to adjust">
               <div class="scope-level-center" />
               <div
                 class="scope-level-fill"
@@ -386,6 +390,7 @@
             <button
               class="btn btn-xs scope-btn scope-color-btn"
               @click="cycleScopeColor"
+              title="Cycle spectrum scope colour theme"
             >
               <span>{{ scopeColorLabel }}</span>
             </button>
@@ -396,6 +401,7 @@
               class="btn btn-xs scope-btn scope-color-btn"
               :class="{ 'scope-btn--active': state.scope?.marker === true }"
               @click="toggleScopeMarker"
+              title="Toggle centre frequency marker on spectrum scope"
             >
               <span>MARKER {{ state.scope?.marker == null ? '--' : state.scope.marker ? 'ON' : 'OFF' }}</span>
             </button>
@@ -456,6 +462,7 @@
                   class="btn btn-sm"
                   :disabled="!radioMemWriteSlots[ch.id] || radioMemWriteSlots[ch.id] < 1"
                   @click="writeChannelToRadio(ch)"
+                  title="Write this channel to the selected radio memory slot"
                 >→ Radio</button>
               </div>
             </div>
@@ -471,7 +478,7 @@
               <input type="number" min="1" max="999" class="slot-input" v-model.number="radioMemScanFrom" />
               <span class="slot-sep">–</span>
               <input type="number" min="1" max="999" class="slot-input" v-model.number="radioMemScanTo" />
-              <button class="btn btn-sm" :disabled="radioMemScanning || !state.connected" @click="scanRadioMemory">
+              <button class="btn btn-sm" :disabled="radioMemScanning || !state.connected" @click="scanRadioMemory" title="Read radio memory slots in the selected range">
                 {{ radioMemScanning ? 'Scanning…' : 'Scan' }}
               </button>
             </div>
@@ -504,7 +511,7 @@
           @keydown.enter="sendManualCommand"
           spellcheck="false"
         />
-        <button class="btn btn-primary btn-sm" @click="sendManualCommand">Send</button>
+        <button class="btn btn-primary btn-sm" @click="sendManualCommand" title="Send raw CAT command to radio">Send</button>
         <span class="cmd-response" v-if="manualResponse">→ {{ manualResponse }}</span>
       </section>
 
@@ -521,10 +528,10 @@
             <span class="slot-sep">–</span>
             <input type="number" v-model.number="chListScanTo" min="1" max="999" class="slot-input" />
           </div>
-          <button class="btn btn-primary btn-sm chlist-action-btn" :disabled="chListScanning" @click="readAllFromRadio">
+          <button class="btn btn-primary btn-sm chlist-action-btn" :disabled="chListScanning" @click="readAllFromRadio" title="Read all memory channels from radio into the table">
             {{ chListScanning ? `Reading… ${chListScanDone}/${chListScanTotal}` : 'Read from Radio' }}
           </button>
-          <button class="btn btn-sm chlist-action-btn" :disabled="chListWriting || (!chListDirtyCount && !chListWriting) || !state.connected" @click="writeAllToRadio">
+          <button class="btn btn-sm chlist-action-btn" :disabled="chListWriting || (!chListDirtyCount && !chListWriting) || !state.connected" @click="writeAllToRadio" title="Write all modified channels back to radio memory">
             {{ chListWriting ? `Writing… ${chListWriteDone}/${chListWriteTotal}` : chListDirtyCount ? `Write to Radio (${chListDirtyCount})` : 'Write to Radio' }}
           </button>
           <button
@@ -532,17 +539,19 @@
             class="btn btn-sm btn-del chlist-action-btn"
             :disabled="chListDeleting || !state.connected"
             @click="deleteSelectedFromRadio"
+            title="Overwrite selected memory slots with blank data on the radio"
           >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.length})` }}</button>
           <button
             class="btn btn-sm btn-wipe chlist-action-btn"
             :disabled="chListWiping || chListDeleting || !state.connected"
             @click="wipeAllDialog = true"
+            title="Overwrite ALL memory slots with blank data — cannot be undone"
           >{{ chListWiping ? `Wiping…` : 'Wipe All Memory' }}</button>
           <div class="chlist-toolbar-sep" />
-          <button class="btn btn-sm" @click="addNewChannel">+ Add Channel</button>
-          <button class="btn btn-sm" @click="rsgbDialog = true">+ Add from RSGB</button>
-          <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length">Export CSV</button>
-          <button class="btn btn-sm" @click="triggerImport">Import CSV</button>
+          <button class="btn btn-sm" @click="addNewChannel" title="Add a blank channel row to the table">+ Add Channel</button>
+          <button class="btn btn-sm" @click="rsgbDialog = true" title="Search the RSGB repeater database and import channels">+ Add from RSGB</button>
+          <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length" title="Export channel list to CSV file">Export CSV</button>
+          <button class="btn btn-sm" @click="triggerImport" title="Import channels from a CSV file">Import CSV</button>
           <input ref="csvImportRef" type="file" accept=".csv,text/csv" class="csv-hidden-input" @change="onImportCsv" />
           <span class="chlist-count" v-if="channelListRows.length">{{ channelListRows.length }} channels</span>
         </div>

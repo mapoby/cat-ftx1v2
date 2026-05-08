@@ -1,5 +1,5 @@
 <template>
-  <div class="smeter">
+  <div class="smeter" :title="title">
     <div class="smeter-label">{{ label }}</div>
     <div class="smeter-bar-bg">
       <div
@@ -26,6 +26,7 @@ import { computed } from 'vue'
 const props = defineProps<{
   value: number | null
   label?: string
+  title?: string
 }>()
 
 // FTX-1 S-meter: 0-255 raw value
