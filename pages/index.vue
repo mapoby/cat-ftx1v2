@@ -295,7 +295,7 @@
       <section class="status-section">
         <StatusBadge label="RX MODE" :value="state.rxMode?.toUpperCase() ?? '--'" :active="state.rxMode === 'dual'" color-active="#10b981" :clickable="state.rxMode !== null" :busy="rxModeBusy" @toggle="toggleRxMode" />
         <StatusBadge label="SPLIT" :value="state.split ? 'ON' : 'OFF'" :active="state.split" :clickable="true" :busy="splitBusy" @toggle="toggleSplit" />
-        <StatusBadge label="MOX" :value="state.mox ? 'ON' : 'OFF'" :active="state.mox" color-active="#ef4444" :clickable="true" :busy="moxBusy" @toggle="toggleMox" />
+        <StatusBadge label="MOX" :value="state.mox ? 'ON' : 'OFF'" :active="state.mox" color-active="#ef4444" :clickable="!radioMemScanning" :busy="moxBusy" @toggle="toggleMox" />
         <StatusBadge label="LOCK" :value="state.lock != null ? (state.lock ? 'ON' : 'OFF') : '--'" :active="state.lock === true" color-active="#f59e0b" :clickable="state.lock !== null" :busy="lockBusy" @toggle="toggleLock" />
         <div class="dnr-wrap" :class="{ 'dnr-wrap--active': state.powerLevel != null }" @wheel.prevent="onPwrWheel">
           <StatusBadge label="PWR" :value="state.powerLevel != null ? state.powerLevel + ' W' : '--'" />
@@ -413,7 +413,7 @@
               v-for="preset in presets"
               :key="preset.id"
               :preset="preset"
-              :connected="state.connected"
+              :connected="state.connected && !radioMemScanning"
               @executed="onPresetExecuted"
             />
           </div>
