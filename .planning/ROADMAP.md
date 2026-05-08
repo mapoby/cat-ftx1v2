@@ -48,8 +48,11 @@ Plans:
   3. A `?;` error response from the radio is shown in the UI with the name of the command that caused it
   4. A command that times out (1500 ms) is shown in the UI with the command name and a "radio did not respond" message
   5. Unplugging the radio clears VFO and status state without requiring a page reload
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Browser compatibility gate: inline script + remove old banner (COMPAT-01, COMPAT-02)
+- [ ] 02-02-PLAN.md — Error surface: ?; and timeout messages + disconnect event (ERR-01, ERR-02, ERR-03)
 
 ### Phase 3: Data Integrity — Memory Operations
 **Goal**: Every write to the radio produces visible per-slot feedback, every import is validated before any data changes, and protocol limitations are disclosed to the user
@@ -81,7 +84,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
-| 2. Browser Compatibility + Error Surface | 0/? | Not started | - |
+| 2. Browser Compatibility + Error Surface | 0/2 | Not started | - |
 | 3. Data Integrity — Memory Operations | 0/? | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
 
