@@ -413,9 +413,17 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
         let ctcssIdx: number | null = null
         let dcsIdx: number | null = null
         if (sqlType <= 2) {
-          try { await _sendAndWait('CN00', 1000); ctcssIdx = state.value.mainCtcssTone } catch { }
+          try {
+            const resp = await _sendAndWait('CN00', 1000)
+            const idx = parseInt(resp.substring(4), 10)
+            ctcssIdx = isNaN(idx) ? null : idx
+          } catch { }
         } else {
-          try { await _sendAndWait('CN01', 1000); dcsIdx = state.value.mainDcsCode } catch { }
+          try {
+            const resp = await _sendAndWait('CN01', 1000)
+            const idx = parseInt(resp.substring(4), 10)
+            dcsIdx = isNaN(idx) ? null : idx
+          } catch { }
         }
         const channels = { ...state.value.radioChannels }
         channels[slot] = { ...channels[slot], ctcssIdx, dcsIdx }
