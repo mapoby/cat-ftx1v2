@@ -1088,6 +1088,14 @@ const antSelectBusy = ref(false)
 const rxModeBusy = ref(false)
 const splitBusy = ref(false)
 const activeTab = ref<'dashboard' | 'channels'>('dashboard')
+watch(activeTab, async (newTab, oldTab) => {
+  if (!state.value.connected) return
+  if (newTab === 'channels') {
+    try { await send('AI0') } catch { }
+  } else if (oldTab === 'channels') {
+    try { await send('AI1') } catch { }
+  }
+})
 const savedChannels = ref<ChannelConfig[]>([])
 const radioMemScanFrom = ref(1)
 const radioMemScanTo   = ref(99)
