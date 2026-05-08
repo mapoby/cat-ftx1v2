@@ -429,10 +429,23 @@ export async function readMemoryChannel(slot: number): Promise<RadioChannel | nu
 }
 
 export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
+  const origFreqResp = await _sendAndWait('FA', 1500)
+  const origFreq = origFreqResp.substring(2)
+
+  try { await _sendAndWait('AI0', 1000) } catch { }
+
   await send('VM011')
-  for (let i = from; i <= to; i++) {
-    if (!state.value.connected) break
-    await readMemoryChannel(i)
+  try {
+    for (let i = from; i <= to; i++) {
+      if (!state.value.connected) break
+      await readMemoryChannel(i)
+    }
+  } finally {
+    try {
+      await send('VM000')
+      await send('FA' + origFreq)
+    } catch { }
+    try { await _sendAndWait('AI1', 1000) } catch { }
   }
 }
 
