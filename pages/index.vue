@@ -273,8 +273,8 @@
           </div>
           <SMeter :value="state.mainSmeter" label="MAIN S-meter" />
           <LevelBar :value="state.afGainMain" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
-          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.subMode)))" :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.mainMode))" :value="state.rfGainMain" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('0', $event)" />
+          <LevelBar v-if="(state.sqlRfMode===1)||((state.sqlRfMode===2)&&(!isRfGainMode(state.mainMode)))" :value="state.sqMain" label="SQUELCH" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setSquelch('0', $event)" />
           <br/>
           <section class="status-section">
             <StatusBadge label="AGC" :value="state.agcMain ?? '--'" :active="state.agcMain !== null && state.agcMain !== 'OFF'" color-active="#10b981" :clickable="state.agcMain !== null" :busy="agcBusy" @toggle="cycleAgc('0')" />
@@ -1060,13 +1060,6 @@ interface Preset {
   icon?: string
   description?: string
   commands: string[]
-}
-
-interface CommandResult {
-  command: string
-  response?: string
-  error?: string
-  ok: boolean
 }
 
 const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel, deleteMemorySlot } = useSerial()
@@ -2003,10 +1996,6 @@ async function setSquelch(vfo: '0' | '1', value: number) {
   const val = Math.max(0, Math.min(255, value))
   // SQ P1 xxx ; — P1=0 main / 1 sub, xxx=000-255 (3 digits, zero-padded)
   await send(`SQ${vfo}${String(val).padStart(3, '0')}`).catch((e: any) => { lastError.value = e.message })
-  if (vfo==='1') {
-    await send('SQ1').catch((e: any) => { lastError.value = e.message })
-    await send('SQ0').catch((e: any) => { lastError.value = e.message })
-  }
 }
 
 async function setRfGain(vfo: '0' | '1', value: number) {
@@ -2435,7 +2424,10 @@ function exportCsv() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = 'ftx1-channels.csv'; a.click()
+  a.href = url; a.download = 'ftx1-channels.csv'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
@@ -2448,6 +2440,7 @@ async function onImportCsv(e: Event) {
   const SQL_LABELS   = ['None', 'CTCSS ENC/DEC', 'CTCSS ENC', 'DCS', 'PR FREQ', 'REV TONE']
   const SHIFT_LABELS = ['Simplex', '+', '-']
   const rows: EditableChannel[] = []
+  const validModes = new Set(MODES.map(m => m.label))
   for (const line of text.split(/\r?\n/).slice(1)) {
     if (!line.trim()) continue
     const p = parseCsvLine(line)
@@ -2467,7 +2460,7 @@ async function onImportCsv(e: Event) {
     const clarOffset = parseInt(p[10]) || 0
     rows.push({
       slot, freq, txFreq, splitMem,
-      mode:       p[4] || 'USB',
+      mode:       (validModes.has(p[4]) ? p[4] : null) || 'USB',
       sqlType:    sqlType >= 0 ? sqlType : 0,
       ctcssIdx:   ctcssIdx >= 0 ? ctcssIdx : null,
       dcsIdx:     dcsIdx   >= 0 ? dcsIdx   : null,
