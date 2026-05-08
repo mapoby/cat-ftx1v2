@@ -1083,6 +1083,7 @@ const funcKnobBusy = ref(false)
 const speechProcBusy = ref(false)
 const voxBusy = ref(false)
 const preAmpBusy    = ref(false)
+const rfSqlBusy     = ref(false)
 const antSelectBusy = ref(false)
 const rxModeBusy = ref(false)
 const splitBusy = ref(false)
@@ -1839,15 +1840,17 @@ async function togglePreAmpHf() {
 }
 
 async function toggleRfSql() {
-  if (preAmpBusy.value || state.value.preAmpHf === null) return
-  preAmpBusy.value = true
+  if (rfSqlBusy.value) return
+  rfSqlBusy.value = true
   try {
-    const next = ((state.value.sqlRfMode) + 1) % 3
+    const next = ((state.value.sqlRfMode ?? 0) + 1) % 3
     await send(`EX030102${next}`)
-  } catch (e: any) { lastError.value = e.message } finally { preAmpBusy.value = false }
-  try {
     await send(`EX030102`)
-  } catch (e: any) { lastError.value = e.message } finally {  }
+  } catch (e: any) {
+    lastError.value = e.message
+  } finally {
+    rfSqlBusy.value = false
+  }
 }
 
 async function togglePreAmpVhf() {
