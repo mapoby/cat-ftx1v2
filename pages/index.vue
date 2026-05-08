@@ -195,6 +195,7 @@
             </span>
             </div>
           </div>
+          <template v-if="state.rxMode === 'dual' || state.txVfo === 1">
           <SMeter :value="state.subSmeter" label="SUB S-meter" />
           <LevelBar :value="state.afGainSub" label="VOLUME" color="linear-gradient(90deg,#a60f0f,#c60f0f)" :clickable="true" :wheelable="true" @update="setAfGain('1', $event)" />
           <LevelBar v-if="(state.sqlRfMode===0)||((state.sqlRfMode===2)&&isRfGainMode(state.subMode))" :value="state.rfGainSub" label="RF GAIN" color="linear-gradient(90deg,#f59e0b,#fcd34d)" :clickable="true" @update="setRfGain('1', $event)" />
@@ -211,6 +212,7 @@
             <StatusBadge label="DCS" :value="state.subDcsCode != null ? ('D' + String(DCS_CODES[state.subDcsCode]).padStart(3, '0')) : '--'" :clickable="true" :active="dcsPopupVfo === '1'" @toggle="openDcsPopup('1')" />
             <StatusBadge label="SAVE CH" value="ADD" color-active="#f97316" :clickable="state.subFreq !== null" @toggle="saveChannelFromVfo('1')" />
           </section>
+          </template>
         </div>
 
         <!-- MAIN VFO -->
