@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 1 — Testing Foundation + Bug Fixes
 
 ## Status
-Executing — Plan 02 complete
+Executing — Plan 05 complete
 
 ## Phases
 
@@ -23,7 +23,7 @@ Executing — Plan 02 complete
 
 ## Performance Metrics
 
-- Plans completed: 2
+- Plans completed: 5
 - Requirements delivered: 0/23
 - Phases completed: 0/4
 
@@ -35,6 +35,9 @@ Executing — Plan 02 complete
 - `package.json` needs `"type": "module"` or vitest config must be named `.mts`
 - MODE_CODE must be imported alongside parseResponse in useSerial.ts (writeMemoryChannel uses it)
 - Use `!= null` (not `!== undefined`) to narrow `number | null` to `number` for _fireScopeRequery
+- Each toggle function owns its own busy flag — no shared flags between unrelated toggles
+- Tab lifecycle sends AI0 (disable auto-info) on entry to channels tab, AI1 on exit
+- TX gate during scan via existing connected/clickable props — no new component props needed
 
 ### Blockers
 None
@@ -44,8 +47,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 1, Plan 03 (unit tests for catParser)
-Next action: Execute 01-03-PLAN.md
+Resume from: Phase 1, Plan 06 (next plan)
+Next action: Execute 01-06-PLAN.md (if exists)
 
 ## Last Updated
 2026-05-08
