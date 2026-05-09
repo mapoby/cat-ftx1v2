@@ -8,9 +8,11 @@ human_verification:
   - test: "Open app in Firefox — confirm full-page blocking message appears and no Vue content is visible"
     expected: "A full-page overlay covering the viewport with the wrong-browser message. No VFO display, no connect button rendered beneath."
     why_human: "Cannot run a browser in this environment. The gate appends a position:fixed overlay but does not stop the module script from loading — visual confirmation required."
+    result: "UNTESTED — requires Firefox browser; 127.0.0.1 is a secure context so cannot be simulated from localhost"
   - test: "Open app over plain HTTP in Chrome — confirm HTTPS-required message appears (not wrong-browser message)"
     expected: "Message reads 'This page must be served over HTTPS. Web Serial requires a secure context — plain HTTP is not supported.' No mention of Chrome/Edge."
     why_human: "Requires serving over HTTP to test isSecureContext=false path. The two messages share the same gate IIFE — correct branching requires a live browser test."
+    result: "UNTESTED — requires LAN device access over plain HTTP (not localhost/127.0.0.1)"
   - test: "Connect to radio in Chrome, send a command the radio rejects with ?; — confirm error banner shows command name"
     expected: "Error banner with text like 'Radio rejected command: FA' appears and can be dismissed."
     why_human: "Requires physical FTX-1 radio. The error message text and wiring are verified; the end-to-end display requires hardware."
@@ -37,8 +39,8 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Opening the app in Firefox or Safari shows a full-page blocking message before any Vue component renders, distinguishing "wrong browser" from "page served over HTTP" | ✓ VERIFIED (code) / ? HUMAN (visual) | Gate IIFE at lines 3-22 of generated index.html, precedes first `<script type="module">` at line 24; `hasSerial` branch produces wrong-browser message |
-| 2 | Opening the app over plain HTTP shows a message explaining that HTTPS is required, not a generic Web Serial unavailable error | ✓ VERIFIED (code) / ? HUMAN (visual) | `isSecureContext` check in gate; `hasSerial=true` branch produces "This page must be served over HTTPS..." message |
+| 1 | Opening the app in Firefox or Safari shows a full-page blocking message before any Vue component renders, distinguishing "wrong browser" from "page served over HTTP" | ✓ VERIFIED (code) / ⚠ UNTESTED (visual) | Gate IIFE at lines 3-22 of generated index.html, precedes first `<script type="module">` at line 24; `hasSerial` branch produces wrong-browser message. Visual test skipped — requires Firefox, not available in test environment. |
+| 2 | Opening the app over plain HTTP shows a message explaining that HTTPS is required, not a generic Web Serial unavailable error | ✓ VERIFIED (code) / ⚠ UNTESTED (visual) | `isSecureContext` check in gate; `hasSerial=true` branch produces "This page must be served over HTTPS..." message. Visual test skipped — requires LAN device over plain HTTP; localhost/127.0.0.1 is always a secure context. |
 | 3 | A `?;` error response from the radio is shown in the UI with the name of the command that caused it | ✓ VERIFIED (mechanism) / ? HUMAN (end-to-end) | `_handleResponse` at line 214: `` e.reject(new Error(`Radio rejected command: ${e.cmd}`)) ``; `lastError` banner in index.vue wired via catch blocks |
 | 4 | A command that times out (1500 ms) is shown in the UI with the command name and a "radio did not respond" message | ✓ VERIFIED (mechanism) / ? HUMAN (end-to-end) | `_sendAndWait` timer at line 254: `` reject(new Error(`Radio did not respond to: ${cmd}`)) ``; connect() path surfaces this via `lastError` |
 | 5 | Unplugging the radio clears VFO and status state without requiring a page reload | ✓ VERIFIED (code) / ? HUMAN (hardware) | `_handlePhysicalDisconnect` at line 280: guards on `event.target !== _port`, calls `_unwireSerialEvents()`, drains queue, nulls reader/writer/port, sets `state.value = defaultState()` |
