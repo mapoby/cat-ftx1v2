@@ -1026,10 +1026,11 @@
 
     <!-- ── Wipe All Memory confirmation dialog ── -->
     <Teleport to="body">
-      <div v-if="wipeAllDialog" class="tone-modal-backdrop">
+      <div v-if="wipeAllDialog" class="tone-modal-backdrop" @click.self="wipeAllDialog = false" @keydown.esc="wipeAllDialog = false" tabindex="0">
         <div class="tone-modal wipe-confirm-modal" role="dialog" aria-modal="true" aria-label="Wipe All Memory">
           <div class="tone-modal-header wipe-confirm-header">
             <span class="tone-modal-title">⚠ WARNING</span>
+            <button class="tone-modal-close" @click="wipeAllDialog = false" aria-label="Close">✕</button>
           </div>
           <div class="wipe-confirm-body">
             <p>This will overwrite <strong>all {{ channelListRows.length }} channels</strong> in radio memory with blank defaults (29 MHz, USB, no SQL, empty tag).</p>
@@ -1045,10 +1046,11 @@
 
     <!-- ── Delete Selected confirmation dialog ── -->
     <Teleport to="body">
-      <div v-if="deleteDisclosureDialog" class="tone-modal-backdrop">
+      <div v-if="deleteDisclosureDialog" class="tone-modal-backdrop" @click.self="deleteDisclosureDialog = false" @keydown.esc="deleteDisclosureDialog = false" tabindex="0">
         <div class="tone-modal wipe-confirm-modal" role="dialog" aria-modal="true" aria-label="Delete Selected Channels">
           <div class="tone-modal-header wipe-confirm-header">
             <span class="tone-modal-title">⚠ WARNING</span>
+            <button class="tone-modal-close" @click="deleteDisclosureDialog = false" aria-label="Close">✕</button>
           </div>
           <div class="wipe-confirm-body">
             <p>This will overwrite <strong>{{ selectedSlots.length }} selected slot{{ selectedSlots.length === 1 ? '' : 's' }}</strong> in radio memory with blank defaults (29 MHz, USB, no SQL, empty tag).</p>
