@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 3 — Data Integrity — Memory Operations
 
 ## Status
-Ready to plan
+Ready to execute
 
 ## Phases
 
@@ -53,8 +53,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 3 (Phase 2 verified — 5/5 automated checks passed)
-Next action: /gsd-plan-phase 3
+Resume from: Phase 3 (planned — 3 plans, 3 waves)
+Next action: /gsd-execute-phase 3
 
 ## Last Updated
 2026-05-09 (Phase 2 complete — COMPAT-01, COMPAT-02, ERR-01, ERR-02, ERR-03 delivered)
