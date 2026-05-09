@@ -246,6 +246,10 @@ function _fireScopeRequery(side: number): void {
 
 // ── Command queue: send and wait for response ────────────────────────────────
 
+export function sendAndWait(cmd: string, timeoutMs = 1500): Promise<string> {
+  return _sendAndWait(cmd, timeoutMs)
+}
+
 function _sendAndWait(cmd: string, timeoutMs = 1500): Promise<string> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {

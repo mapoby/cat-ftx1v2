@@ -1041,7 +1041,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useSerial, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
+import { useSerial, sendAndWait, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
 import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
 import LevelBar from '~/components/LevelBar.vue'
@@ -2098,10 +2098,12 @@ async function setFuncKnob(cmd: string) {
 async function sendManualCommand() {
   const cmd = manualCmd.value.trim()
   if (!cmd) return
+  manualResponse.value = '…'
   try {
-    await send(cmd)
-    manualResponse.value = 'Sent'
+    const resp = await sendAndWait(cmd)
+    manualResponse.value = resp || 'OK'
   } catch (e: any) {
+    manualResponse.value = ''
     lastError.value = e.message
   }
 }
