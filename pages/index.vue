@@ -552,6 +552,14 @@
           <span class="chlist-count" v-if="channelListRows.length">{{ channelListRows.length }} channels</span>
         </div>
 
+        <!-- Per-slot write results -->
+        <div v-if="slotWriteResults.length" class="chlist-write-results">
+          <span v-for="r in slotWriteResults" :key="r.slot"
+            :class="r.ok ? 'write-result--ok' : 'write-result--fail'">
+            {{ r.ok ? `Channel ${r.slot} written` : `Channel ${r.slot} failed: ${r.error}` }}
+          </span>
+        </div>
+
         <!-- Table -->
         <div class="chlist-table-wrap">
           <table class="chlist-table" v-if="channelListRows.length">
@@ -1133,6 +1141,7 @@ const selectedSlots   = ref<number[]>([])
 const chListDeleting  = ref(false)
 const wipeAllDialog   = ref(false)
 const chListWiping    = ref(false)
+const slotWriteResults = ref<{ slot: number; ok: boolean; error?: string }[]>([])
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
 const csvImportRef    = ref<HTMLInputElement | null>(null)
@@ -2509,19 +2518,26 @@ async function writeAllToRadio() {
   const dirty = channelListRows.value.filter(r => r.dirty)
   chListWriteDone.value  = 0
   chListWriteTotal.value = dirty.length
+  slotWriteResults.value = []
   try {
     for (const row of dirty) {
       // MR P8: 1=ENC/DEC, 2=ENC  →  CT P2: 1=ENC, 2=ENC/DEC  (swap 1↔2)
       const ctSqlType = row.sqlType === 1 ? 2 : row.sqlType === 2 ? 1 : row.sqlType
-      await writeMemoryChannel(row.slot, {
-        freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
-        mode: row.mode, sqlType: ctSqlType,
-        ctcssIdx: row.ctcssIdx, dcsIdx: row.dcsIdx,
-        clarDir: row.clarDir, clarOffset: row.clarOffset,
-        rxClar: row.rxClar, txClar: row.txClar,
-        shift: row.shift, tag: row.tag || null,
-      }).catch((e: any) => { lastError.value = e.message })
-      row.dirty = false
+      try {
+        await writeMemoryChannel(row.slot, {
+          freq: row.freq, txFreq: row.txFreq, splitMem: row.splitMem,
+          mode: row.mode, sqlType: ctSqlType,
+          ctcssIdx: row.ctcssIdx, dcsIdx: row.dcsIdx,
+          clarDir: row.clarDir, clarOffset: row.clarOffset,
+          rxClar: row.rxClar, txClar: row.txClar,
+          shift: row.shift, tag: row.tag || null,
+        })
+        slotWriteResults.value.push({ slot: row.slot, ok: true })
+        row.dirty = false
+      } catch (e: any) {
+        slotWriteResults.value.push({ slot: row.slot, ok: false, error: e.message })
+        lastError.value = e.message
+      }
       chListWriteDone.value++
     }
     saveChannelList()
@@ -4021,6 +4037,16 @@ body {
   background: var(--border);
   margin: 0 2px;
 }
+
+.chlist-write-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+  font-size: 0.75rem;
+}
+.write-result--ok   { color: #4ade80; }
+.write-result--fail { color: #f87171; }
 
 .chlist-scan-range {
   display: flex;
