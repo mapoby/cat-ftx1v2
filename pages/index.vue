@@ -2299,7 +2299,12 @@ function saveChannelList() {
 function loadChannelList() {
   try {
     const raw = localStorage.getItem('cat_channel_list')
-    if (raw) channelListRows.value = JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      channelListRows.value = Array.isArray(parsed)
+        ? parsed.filter((r: any) => r.slot >= 1 && r.slot <= 999)
+        : []
+    }
   } catch { /* corrupt, ignore */ }
 }
 
