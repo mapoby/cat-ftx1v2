@@ -68,7 +68,7 @@
 
 - [x] 03-01-PLAN.md — Slot 0 guard in useSerial.ts + per-slot write feedback in writeAllToRadio (DATA-04, DATA-02)
 - [x] 03-02-PLAN.md — Delete Selected confirmation modal + harden Wipe All modal (DATA-03)
-- [ ] 03-03-PLAN.md — CSV import validation with two-pass validate-then-confirm flow (DATA-01)
+- [x] 03-03-PLAN.md — CSV import validation with two-pass validate-then-confirm flow (DATA-01)
 
 ### Phase 4: Infrastructure Hardening
 **Goal**: The build is fully reproducible, the container is secured with a Content Security Policy, and ACR pulls via managed identity rather than admin credentials
@@ -90,7 +90,7 @@
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
 | 2. Browser Compatibility + Error Surface | 2/2 | Complete | 2026-05-09 |
-| 3. Data Integrity — Memory Operations | 2/3 | In progress | - |
+| 3. Data Integrity — Memory Operations | 3/3 | Complete | 2026-05-09 |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
 
 ---
