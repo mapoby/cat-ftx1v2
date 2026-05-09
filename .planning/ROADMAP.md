@@ -80,7 +80,12 @@
   3. Every response from the nginx server includes a `Content-Security-Policy` header covering `default-src`, `script-src`, and `connect-src`
   4. App Service pulls images from ACR using managed identity; `adminUserEnabled` is false in Bicep and no admin credential app settings exist
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+- [ ] 04-01-PLAN.md — Remove magic-regexp, regenerate lockfile, switch Dockerfile to npm ci (INFRA-01, INFRA-02)
+- [ ] 04-02-PLAN.md — Add CSP header to nginx.conf server block (INFRA-03)
+- [ ] 04-03-PLAN.md — Bicep managed identity + DockerHub CI push (INFRA-04)
+- [ ] 04-04-PLAN.md — README local Docker + self-hosted Azure docs; setup.sh interactive mode (D-15, D-16, D-17)
 
 ---
 
@@ -91,7 +96,7 @@
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
 | 2. Browser Compatibility + Error Surface | 2/2 | Complete | 2026-05-09 |
 | 3. Data Integrity — Memory Operations | 3/3 | Complete | 2026-05-09 |
-| 4. Infrastructure Hardening | 0/? | Not started | - |
+| 4. Infrastructure Hardening | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-05-08*
