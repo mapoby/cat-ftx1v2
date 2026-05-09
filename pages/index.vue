@@ -1062,6 +1062,31 @@
       </div>
     </Teleport>
 
+    <!-- ── CSV Import validation error dialog ── -->
+    <Teleport to="body">
+      <div v-if="csvConfirmDialog" class="tone-modal-backdrop">
+        <div class="tone-modal wipe-confirm-modal" role="dialog" aria-modal="true" aria-label="CSV Import Errors">
+          <div class="tone-modal-header wipe-confirm-header">
+            <span class="tone-modal-title">CSV Import — Validation Errors</span>
+          </div>
+          <div class="wipe-confirm-body">
+            <p><strong>{{ csvValidationErrors.length }} row{{ csvValidationErrors.length === 1 ? '' : 's' }} failed validation:</strong></p>
+            <ul class="csv-error-list">
+              <li v-for="err in csvValidationErrors" :key="err.row" class="csv-error-item">
+                Row {{ err.row }}: {{ err.reason }}
+              </li>
+            </ul>
+            <p v-if="csvPendingRows.length">{{ csvPendingRows.length }} valid row{{ csvPendingRows.length === 1 ? '' : 's' }} can still be imported.</p>
+            <p v-else class="csv-error-all-invalid">All rows failed — nothing will be imported.</p>
+          </div>
+          <div class="wipe-confirm-actions">
+            <button class="btn btn-sm" @click="csvConfirmDialog = false; csvPendingRows = []; csvValidationErrors = []">Fix CSV</button>
+            <button v-if="csvPendingRows.length" class="btn btn-sm btn-primary" @click="channelListRows = csvPendingRows.sort((a, b) => a.slot - b.slot); csvConfirmDialog = false; csvPendingRows = []; csvValidationErrors = []">Import Valid Rows Only</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -4643,4 +4668,14 @@ body {
 .rsgb-summary strong {
   color: var(--text);
 }
+
+.csv-error-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 8px 0;
+  padding-left: 20px;
+  font-size: 0.8rem;
+}
+.csv-error-item { margin-bottom: 4px; color: #f87171; }
+.csv-error-all-invalid { color: #f87171; font-weight: 600; }
 </style>
