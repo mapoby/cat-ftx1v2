@@ -72,8 +72,6 @@ jobs:
           tags: |
             ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-            # DockerHub push — requires DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets
-            # Fork maintainers: add these secrets before pushing to main
             mapoby/cat-ftx1:${{ github.sha }}
             mapoby/cat-ftx1:latest
 
