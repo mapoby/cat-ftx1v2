@@ -211,7 +211,7 @@ async function _startReadLoop(port: SerialPort): Promise<void> {
 function _handleResponse(response: string): void {
   if (response === '?') {
     const e = _queue.shift()
-    if (e) { clearTimeout(e.timer); e.reject(new Error('CAT error response')) }
+    if (e) { clearTimeout(e.timer); e.reject(new Error(`Radio rejected command: ${e.cmd}`)) }
     return
   }
 
@@ -251,7 +251,7 @@ function _sendAndWait(cmd: string, timeoutMs = 1500): Promise<string> {
     const timer = setTimeout(() => {
       const idx = _queue.findIndex(e => e === entry)
       if (idx >= 0) _queue.splice(idx, 1)
-      reject(new Error(`Timeout: ${cmd}`))
+      reject(new Error(`Radio did not respond to: ${cmd}`))
     }, timeoutMs)
     const entry: QueueEntry = { cmd, resolve, reject, timer }
     _queue.push(entry)
