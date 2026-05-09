@@ -30,6 +30,8 @@
       <div class="conn-status" :class="state.connected ? 'status-ok' : 'status-off'">
         {{ state.connected ? '● Connected' : '○ Disconnected' }}
       </div>
+
+      <a class="docs-link" href="https://www.yaesu.com/product-detail.aspx?Model=FTX-1%20Series&CatName=HF%20Transceivers/Amplifiers" target="_blank" rel="noopener noreferrer" title="Download Yaesu FTX-1 docs and drivers">FTX-1 docs &amp; drivers</a>
     </header>
 
     <!-- ── Error banner ── -->
@@ -2980,6 +2982,17 @@ body {
 
 .status-ok { background: rgba(63,185,80,.15); color: var(--green); }
 .status-off { background: rgba(139,148,158,.1); color: var(--text-muted); }
+
+.docs-link {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity .15s;
+}
+.docs-link:hover { opacity: 1; color: var(--accent); }
 
 /* ── Error banner ── */
 .error-banner {
