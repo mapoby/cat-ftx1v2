@@ -135,9 +135,23 @@ az ad app federated-credential create \
     \"audiences\": [\"api://AzureADTokenExchange\"]
   }" -o none 2>/dev/null || true
 
-# ── 5. Print GitHub configuration ────────────────────────────────────────────
+# ── 5. ACR scheduled purge task (keep only last 30 days of sha-tagged images) ─
 echo ""
-echo "[5/5] Done. Add these to your GitHub repository:"
+echo "[5/6] Creating ACR scheduled purge task…"
+az acr task create \
+  --registry "$ACR_NAME" \
+  --name purge-old-images \
+  --file infra/acr-purge-task.yaml \
+  --context "https://github.com/${GITHUB_REPO}.git#main" \
+  --schedule "0 2 * * 0" \
+  --commit-trigger-enabled false \
+  --pull-request-trigger-enabled false \
+  --output none 2>/dev/null || echo "  (purge task already exists)"
+echo "  Scheduled: weekly on Sunday at 02:00 UTC — keeps last 5 sha-tags + anything <30d, :latest preserved"
+
+# ── 6. Print GitHub configuration ────────────────────────────────────────────
+echo ""
+echo "[6/6] Done. Add these to your GitHub repository:"
 echo ""
 echo "================================================================"
 echo " Settings → Secrets and variables → Actions"
