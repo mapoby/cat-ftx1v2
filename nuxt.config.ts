@@ -38,6 +38,7 @@ export default defineNuxtConfig({
     public: {
       appVersion: process.env.APP_VERSION ?? 'dev',
       buildDate: _buildDate,
+      web3formsKey: process.env.WEB3FORMS_KEY ?? '',
     },
   },
 })

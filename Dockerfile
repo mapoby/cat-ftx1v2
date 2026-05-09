@@ -8,7 +8,9 @@ RUN npm ci
 
 COPY . .
 ARG APP_VERSION=dev
+ARG WEB3FORMS_KEY=
 ENV APP_VERSION=$APP_VERSION
+ENV WEB3FORMS_KEY=$WEB3FORMS_KEY
 RUN npm run generate          # outputs to .output/public
 
 # ── Stage 2: serve with nginx ─────────────────────────────────────────────────

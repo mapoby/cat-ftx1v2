@@ -1206,7 +1206,7 @@ const feedbackBody = ref('')
 const feedbackSending = ref(false)
 const feedbackSent = ref(false)
 const feedbackSendError = ref('')
-const WEB3FORMS_KEY = 'YOUR_WEB3FORMS_KEY' // get free key at web3forms.com → enter info@narmico.com
+const WEB3FORMS_KEY = useRuntimeConfig().public.web3formsKey
 function openFeedback() { feedbackOpen.value = true; feedbackTab.value = 'form'; feedbackSent.value = false; feedbackSendError.value = '' }
 function closeFeedback() {
   feedbackOpen.value = false
