@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # One-time Azure provisioning script for CAT FTX-1
 # Run this once locally with: bash infra/setup.sh
 #
@@ -21,7 +22,7 @@ if [[ -n "${APP_NAME:-}" && -n "${LOCATION:-}" && -n "${GITHUB_REPO:-}" ]]; then
   SKU="${SKU:-$DEFAULT_SKU}"
 else
   echo "Use default values? [y/N]"
-  read -r _USE_DEFAULTS
+  read -r _USE_DEFAULTS || true
   _USE_DEFAULTS="${_USE_DEFAULTS:-n}"
 
   if [[ "$_USE_DEFAULTS" =~ ^[Yy]$ ]]; then
@@ -30,21 +31,20 @@ else
     GITHUB_REPO="${GITHUB_REPO:-$DEFAULT_GITHUB_REPO}"
     SKU="${SKU:-$DEFAULT_SKU}"
   else
-    read -rp "App name [$DEFAULT_APP_NAME]: " _INPUT_APP_NAME
+    read -rp "App name [$DEFAULT_APP_NAME]: " _INPUT_APP_NAME || true
     APP_NAME="${APP_NAME:-${_INPUT_APP_NAME:-$DEFAULT_APP_NAME}}"
 
-    read -rp "Location [$DEFAULT_LOCATION]: " _INPUT_LOCATION
+    read -rp "Location [$DEFAULT_LOCATION]: " _INPUT_LOCATION || true
     LOCATION="${LOCATION:-${_INPUT_LOCATION:-$DEFAULT_LOCATION}}"
 
-    read -rp "GitHub repo [$DEFAULT_GITHUB_REPO]: " _INPUT_GITHUB_REPO
+    read -rp "GitHub repo [$DEFAULT_GITHUB_REPO]: " _INPUT_GITHUB_REPO || true
     GITHUB_REPO="${GITHUB_REPO:-${_INPUT_GITHUB_REPO:-$DEFAULT_GITHUB_REPO}}"
 
-    read -rp "App Service SKU [$DEFAULT_SKU]: " _INPUT_SKU
+    read -rp "App Service SKU [$DEFAULT_SKU]: " _INPUT_SKU || true
     SKU="${SKU:-${_INPUT_SKU:-$DEFAULT_SKU}}"
   fi
 fi
 
-set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RG="${RG:-${APP_NAME}-rg}"
 
