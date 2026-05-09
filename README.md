@@ -1,4 +1,4 @@
-# CAT FTX-1 v2
+# Yaesu FTX-1 radio WEB based remote control v2
 
 Browser-based remote control for the Yaesu FTX-1 transceiver using the CAT (Computer Aided Transceiver) protocol over USB serial.
 
