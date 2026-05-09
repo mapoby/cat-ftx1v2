@@ -2418,7 +2418,7 @@ async function wipeAllMemory() {
   if (chListWiping.value || !channelListRows.value.length) return
   chListWiping.value = true
   wipeAllDialog.value = false
-  const slots = channelListRows.value.map(r => r.slot)
+  const slots = channelListRows.value.map(r => r.slot).filter(s => s >= 1)
   try {
     for (const slot of slots) {
       await deleteMemorySlot(slot).catch((e: any) => { lastError.value = e.message })
