@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 2 — Browser Compatibility + Error Surface
 
 ## Status
-In progress — Plan 01 complete
+In progress — Plan 02 complete
 
 ## Phases
 
@@ -23,8 +23,8 @@ In progress — Plan 01 complete
 
 ## Performance Metrics
 
-- Plans completed: 7
-- Requirements delivered: 12/23
+- Plans completed: 8
+- Requirements delivered: 15/23
 - Phases completed: 1/4
 
 ## Accumulated Context
@@ -52,8 +52,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 2, Plan 02 (02-01 complete — browser gate + compat-warning removal)
-Next action: Execute 02-02 (error surface)
+Resume from: Phase 2, Plan 03 (02-02 complete — ERR-01, ERR-02, ERR-03 delivered)
+Next action: Execute 02-03 (next Phase 2 plan)
 
 ## Last Updated
-2026-05-09 (02-01 complete — COMPAT-01 and COMPAT-02 delivered)
+2026-05-09 (02-02 complete — ERR-01, ERR-02, ERR-03 delivered)
