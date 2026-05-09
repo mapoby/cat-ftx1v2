@@ -28,9 +28,9 @@
 
 ### Error Surface
 
-- [ ] **ERR-01**: `?;` error responses from the radio are surfaced to the user with the originating command name, not silently dropped
-- [ ] **ERR-02**: Command timeout (1500 ms) is surfaced with the originating command name and a "radio did not respond" message
-- [ ] **ERR-03**: `navigator.serial` `connect` and `disconnect` events are wired; stale VFO/status state is cleared on disconnect without requiring a page reload
+- [x] **ERR-01**: `?;` error responses from the radio are surfaced to the user with the originating command name, not silently dropped
+- [x] **ERR-02**: Command timeout (1500 ms) is surfaced with the originating command name and a "radio did not respond" message
+- [x] **ERR-03**: `navigator.serial` `connect` and `disconnect` events are wired; stale VFO/status state is cleared on disconnect without requiring a page reload
 
 ### Data Integrity
 
@@ -91,9 +91,9 @@
 | BUG-05 | Phase 1 | Pending |
 | COMPAT-01 | Phase 2 | Complete |
 | COMPAT-02 | Phase 2 | Complete |
-| ERR-01 | Phase 2 | Pending |
-| ERR-02 | Phase 2 | Pending |
-| ERR-03 | Phase 2 | Pending |
+| ERR-01 | Phase 2 | Complete |
+| ERR-02 | Phase 2 | Complete |
+| ERR-03 | Phase 2 | Complete |
 | DATA-01 | Phase 3 | Pending |
 | DATA-02 | Phase 3 | Pending |
 | DATA-03 | Phase 3 | Pending |

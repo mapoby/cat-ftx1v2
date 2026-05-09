@@ -10,7 +10,7 @@
 ## Phases
 
 - [x] **Phase 1: Testing Foundation + Bug Fixes** - Extract and test the CAT parser; fix the three silent data-corruption paths
-- [ ] **Phase 2: Browser Compatibility + Error Surface** - Gate unsupported browsers before the bundle loads; surface all command errors by name
+- [x] **Phase 2: Browser Compatibility + Error Surface** - Gate unsupported browsers before the bundle loads; surface all command errors by name
 - [ ] **Phase 3: Data Integrity — Memory Operations** - Validate every write path and disclose protocol limitations to the user
 - [ ] **Phase 4: Infrastructure Hardening** - Lock the build, remove unused deps, add CSP, migrate ACR to managed identity
 
@@ -84,7 +84,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
-| 2. Browser Compatibility + Error Surface | 1/2 | In progress | - |
+| 2. Browser Compatibility + Error Surface | 2/2 | Complete | 2026-05-09 |
 | 3. Data Integrity — Memory Operations | 0/? | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
 

@@ -4,20 +4,20 @@
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** A connected operator can control every aspect of their FTX-1 from a browser tab without touching the radio.
-**Current focus:** Phase 2
+**Current focus:** Phase 3
 
 ## Current Phase
-Phase 2 — Browser Compatibility + Error Surface
+Phase 3 — Data Integrity — Memory Operations
 
 ## Status
-In progress — Plan 02 complete
+Ready to plan
 
 ## Phases
 
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | Testing Foundation + Bug Fixes | Complete |
-| 2 | Browser Compatibility + Error Surface | Not started |
+| 2 | Browser Compatibility + Error Surface | Complete |
 | 3 | Data Integrity — Memory Operations | Not started |
 | 4 | Infrastructure Hardening | Not started |
 
@@ -25,7 +25,7 @@ In progress — Plan 02 complete
 
 - Plans completed: 8
 - Requirements delivered: 15/23
-- Phases completed: 1/4
+- Phases completed: 2/4
 
 ## Accumulated Context
 
@@ -38,6 +38,7 @@ In progress — Plan 02 complete
 - Each toggle function owns its own busy flag — no shared flags between unrelated toggles
 - Browser gate uses tagPriority:critical IIFE in app.head.script — runs before Nuxt module bundle
 - Two distinct gate messages: HTTPS-required (COMPAT-02) vs wrong-browser (COMPAT-01)
+- Physical disconnect handler (_handlePhysicalDisconnect) self-unwires on first fire — prevents double-reset
 - Tab lifecycle sends AI0 (disable auto-info) on entry to channels tab, AI1 on exit
 - TX gate during scan via existing connected/clickable props — no new component props needed
 - scanMemoryChannels disables AI mode (AI0) before bulk read and re-enables (AI1) in finally — BUG-04
@@ -52,8 +53,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 2, Plan 03 (02-02 complete — ERR-01, ERR-02, ERR-03 delivered)
-Next action: Execute 02-03 (next Phase 2 plan)
+Resume from: Phase 3 (Phase 2 verified — 5/5 automated checks passed)
+Next action: /gsd-plan-phase 3
 
 ## Last Updated
-2026-05-09 (02-02 complete — ERR-01, ERR-02, ERR-03 delivered)
+2026-05-09 (Phase 2 complete — COMPAT-01, COMPAT-02, ERR-01, ERR-02, ERR-03 delivered)
