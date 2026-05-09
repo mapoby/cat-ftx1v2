@@ -27,10 +27,6 @@
         </button>
       </div>
 
-      <div v-if="!isSupported" class="compat-warning">
-        ⚠ Web Serial API not supported — use Chrome or Edge
-      </div>
-
       <div class="conn-status" :class="state.connected ? 'status-ok' : 'status-off'">
         {{ state.connected ? '● Connected' : '○ Disconnected' }}
       </div>
@@ -2886,14 +2882,6 @@ body {
 .status-off { background: rgba(139,148,158,.1); color: var(--text-muted); }
 
 /* ── Error banner ── */
-.compat-warning {
-  background: #3d2e00;
-  border-bottom: 1px solid #d29922;
-  color: #d29922;
-  padding: 8px 20px;
-  font-size: 13px;
-}
-
 .error-banner {
   background: rgba(248,81,73,.12);
   border-bottom: 1px solid var(--red);
