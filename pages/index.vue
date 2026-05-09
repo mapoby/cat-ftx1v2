@@ -729,7 +729,51 @@
         <span v-if="state.firmware?.sdr">Sdr: {{ state.firmware.sdr }} · </span>
         <span v-if="state.firmware?.spa1">Opt: {{ state.firmware.spa1 }} · </span>
         <span v-if="state.firmware?.fc80">Fc80: {{ state.firmware.fc80 }} · </span> Last update: {{ lastUpdateTime }}</span>
+      <button class="feedback-trigger" @click="openFeedback" title="Report a bug or request a feature">Feedback</button>
     </footer>
+
+    <!-- ── Feedback modal ── -->
+    <Teleport to="body">
+      <div v-if="feedbackOpen" class="feedback-backdrop" @click.self="closeFeedback">
+        <div class="feedback-modal" role="dialog" aria-modal="true" aria-label="Send feedback">
+          <div class="feedback-header">
+            <span class="feedback-title">Send Feedback</span>
+            <button class="feedback-close" @click="closeFeedback" title="Close">✕</button>
+          </div>
+          <div class="feedback-body">
+            <div class="feedback-types">
+              <label :class="['feedback-type-btn', { active: feedbackType === 'bug' }]">
+                <input type="radio" v-model="feedbackType" value="bug" /> Bug report
+              </label>
+              <label :class="['feedback-type-btn', { active: feedbackType === 'enhancement' }]">
+                <input type="radio" v-model="feedbackType" value="enhancement" /> Feature request
+              </label>
+              <label :class="['feedback-type-btn', { active: feedbackType === 'question' }]">
+                <input type="radio" v-model="feedbackType" value="question" /> Question
+              </label>
+            </div>
+            <input
+              v-model="feedbackTitle"
+              class="feedback-input"
+              type="text"
+              placeholder="Short title"
+              maxlength="100"
+            />
+            <textarea
+              v-model="feedbackBody"
+              class="feedback-textarea"
+              :placeholder="feedbackType === 'bug' ? 'What happened? Steps to reproduce?' : feedbackType === 'enhancement' ? 'What would you like added or changed?' : 'What would you like to know?'"
+              rows="5"
+            />
+            <p class="feedback-note">Opens GitHub in a new tab · Requires a GitHub account to submit</p>
+          </div>
+          <div class="feedback-footer">
+            <button class="btn" @click="closeFeedback">Cancel</button>
+            <button class="btn btn-primary" :disabled="!feedbackTitle.trim()" @click="submitFeedback">Open on GitHub</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- ── CTCSS tone picker modal (teleported to body) ── -->
     <Teleport to="body">
@@ -1127,6 +1171,20 @@ const selectedBaud    = ref(38400)
 const knownPorts      = ref<any[]>([])
 const selectedPortIdx = ref(-1)
 const lastError = ref<string | null>(null)
+const feedbackOpen = ref(false)
+const feedbackType = ref<'bug' | 'enhancement' | 'question'>('bug')
+const feedbackTitle = ref('')
+const feedbackBody = ref('')
+const FEEDBACK_REPO = 'mapoby/cat-ftx1v2'
+const FEEDBACK_LABELS: Record<string, string> = { bug: 'bug', enhancement: 'enhancement', question: 'question' }
+function openFeedback() { feedbackOpen.value = true }
+function closeFeedback() { feedbackOpen.value = false; feedbackTitle.value = ''; feedbackBody.value = ''; feedbackType.value = 'bug' }
+function submitFeedback() {
+  const label = FEEDBACK_LABELS[feedbackType.value]
+  const url = `https://github.com/${FEEDBACK_REPO}/issues/new?labels=${label}&title=${encodeURIComponent(feedbackTitle.value)}&body=${encodeURIComponent(feedbackBody.value)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+  closeFeedback()
+}
 const manualCmd = ref('')
 const manualResponse = ref('')
 const manualResponseError = ref(false)
@@ -3969,8 +4027,132 @@ body {
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 20px;
+}
+
+.feedback-trigger {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color .15s, border-color .15s;
+}
+.feedback-trigger:hover { color: var(--accent); border-color: var(--accent); }
+
+.feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 440px;
+  max-width: 95vw;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.feedback-title { font-weight: 600; font-size: 14px; }
+
+.feedback-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.feedback-close:hover { color: var(--text); }
+
+.feedback-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-types {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.feedback-type-btn input { display: none; }
+.feedback-type-btn.active { border-color: var(--accent); background: rgba(88,166,255,.1); color: var(--accent); }
+
+.feedback-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
+  box-sizing: border-box;
+}
+.feedback-input:focus { outline: none; border-color: var(--accent); }
+
+.feedback-textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.feedback-textarea:focus { outline: none; border-color: var(--accent); }
+
+.feedback-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.feedback-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border);
 }
 
 .footer-fw {
