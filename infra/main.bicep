@@ -11,6 +11,8 @@ param location string = resourceGroup().location
 @allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'P1v3', 'P2v3'])
 param sku string = 'B1'
 
+var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+
 // ── Azure Container Registry ─────────────────────────────────────────────────
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
@@ -18,7 +20,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   location: location
   sku: { name: 'Basic' }    // Basic: ~$0.17/day, sufficient for CI/CD
   properties: {
-    adminUserEnabled: true   // needed for App Service to pull images
+    adminUserEnabled: false
   }
 }
 
@@ -36,11 +38,12 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
 
 // ── Web App (Linux container) ─────────────────────────────────────────────────
 
-var acrCreds = acr.listCredentials()
-
 resource webapp 'Microsoft.Web/sites@2023-12-01' = {
   name: '${appName}-app'   // becomes <name>.azurewebsites.net
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true          // redirect all HTTP → HTTPS (Web Serial API needs HTTPS)
@@ -48,18 +51,6 @@ resource webapp 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'DOCKER|${acr.properties.loginServer}/${appName}:latest'
       alwaysOn: true         // keep container warm (B1+)
       appSettings: [
-        {
-          name:  'DOCKER_REGISTRY_SERVER_URL'
-          value: 'https://${acr.properties.loginServer}'
-        }
-        {
-          name:  'DOCKER_REGISTRY_SERVER_USERNAME'
-          value: acrCreds.username
-        }
-        {
-          name:  'DOCKER_REGISTRY_SERVER_PASSWORD'
-          value: acrCreds.passwords[0].value
-        }
         {
           name:  'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
           value: 'false'     // stateless container — no persistent storage needed
@@ -70,6 +61,31 @@ resource webapp 'Microsoft.Web/sites@2023-12-01' = {
         }
       ]
     }
+  }
+}
+
+// ── Grant AcrPull to webapp managed identity ──────────────────────────────────
+
+resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, webapp.id, acrPullRoleId)
+  scope: acr
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      acrPullRoleId
+    )
+    principalId: webapp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ── Enable managed identity image pulls ──────────────────────────────────────
+
+resource webappConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: webapp
+  name: 'web'
+  properties: {
+    acrUseManagedIdentityCreds: true
   }
 }
 
