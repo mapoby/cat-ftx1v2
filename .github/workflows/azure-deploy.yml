@@ -7,6 +7,7 @@ on:
 
 env:
   IMAGE_NAME: cat-ftx1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # OIDC — no long-lived secrets, token is minted per-run
 permissions:
@@ -33,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test
+        run: npm run test:coverage
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
