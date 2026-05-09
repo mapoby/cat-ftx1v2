@@ -28,9 +28,9 @@
   3. Memory channel scan completes and the radio VFO is left on the frequency it had before the scan started, even if the scan errors mid-run
   4. `toggleRfSql()` executes without throwing and does not require `preAmpHf` to be non-null
   5. `readMemoryChannel()` reads CTCSS/DCS tone from the command response, not from stale global state
+
 **Plans:** 6 plans
 
-Plans:
 - [x] 01-01-PLAN.md — Extract catParser.ts + export defaultState (TEST-01, TEST-03)
 - [x] 01-02-PLAN.md — Install Vitest, create vitest.config.mts, add npm test scripts (TEST-04 infra, TEST-05 infra)
 - [x] 01-03-PLAN.md — Write 40+ opcode tests in catParser.test.ts (TEST-02)
@@ -48,9 +48,9 @@ Plans:
   3. A `?;` error response from the radio is shown in the UI with the name of the command that caused it
   4. A command that times out (1500 ms) is shown in the UI with the command name and a "radio did not respond" message
   5. Unplugging the radio clears VFO and status state without requiring a page reload
+
 **Plans**: 2 plans
 
-Plans:
 - [x] 02-01-PLAN.md — Browser compatibility gate: inline script + remove old banner (COMPAT-01, COMPAT-02)
 - [ ] 02-02-PLAN.md — Error surface: ?; and timeout messages + disconnect event (ERR-01, ERR-02, ERR-03)
 
@@ -63,8 +63,12 @@ Plans:
   2. Writing memory channels shows "Channel N written" or "Channel N failed" for each slot in the UI
   3. Delete and Wipe All operations display a persistent disclosure that the slot is overwritten with blank values and the slot number is not removed from the radio
   4. No code path in the app accepts slot 0 as a write or delete target
-**Plans**: TBD
-**UI hint**: yes
+
+**Plans**: 3 plans
+
+- [ ] 03-01-PLAN.md — Slot 0 guard in useSerial.ts + per-slot write feedback in writeAllToRadio (DATA-04, DATA-02)
+- [ ] 03-02-PLAN.md — Delete Selected confirmation modal + harden Wipe All modal (DATA-03)
+- [ ] 03-03-PLAN.md — CSV import validation with two-pass validate-then-confirm flow (DATA-01)
 
 ### Phase 4: Infrastructure Hardening
 **Goal**: The build is fully reproducible, the container is secured with a Content Security Policy, and ACR pulls via managed identity rather than admin credentials
@@ -75,6 +79,7 @@ Plans:
   2. `magic-regexp` is absent from `package.json` and `package-lock.json`
   3. Every response from the nginx server includes a `Content-Security-Policy` header covering `default-src`, `script-src`, and `connect-src`
   4. App Service pulls images from ACR using managed identity; `adminUserEnabled` is false in Bicep and no admin credential app settings exist
+
 **Plans**: TBD
 
 ---
@@ -85,7 +90,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
 | 2. Browser Compatibility + Error Surface | 2/2 | Complete | 2026-05-09 |
-| 3. Data Integrity — Memory Operations | 0/? | Not started | - |
+| 3. Data Integrity — Memory Operations | 0/3 | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
 
 ---
