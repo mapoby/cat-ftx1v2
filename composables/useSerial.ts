@@ -269,6 +269,24 @@ function _drainQueue(err: Error): void {
   for (const e of q) { clearTimeout(e.timer); e.reject(err) }
 }
 
+function _wireSerialEvents(): void {
+  ;(navigator as any).serial.addEventListener('disconnect', _handlePhysicalDisconnect)
+}
+
+function _unwireSerialEvents(): void {
+  ;(navigator as any).serial.removeEventListener('disconnect', _handlePhysicalDisconnect)
+}
+
+function _handlePhysicalDisconnect(event: Event): void {
+  if ((event as any).target !== _port) return
+  _unwireSerialEvents()
+  _drainQueue(new Error('Serial port disconnected'))
+  if (_reader) { try { _reader.cancel() } catch { } _reader = null }
+  if (_writer) { try { _writer.releaseLock() } catch { } _writer = null }
+  _port = null
+  state.value = defaultState()
+}
+
 // ── Init sequences ───────────────────────────────────────────────────────────
 
 async function _enableAutoInfo(): Promise<void> {
@@ -342,6 +360,7 @@ export async function connect(baudRate = 38400, knownPort?: any): Promise<void> 
     _initialSync2() // fire-and-forget; AI mode handles unsolicited responses
 
     _patch({ connected: true, baudRate, port: 'Web Serial', error: null })
+    _wireSerialEvents()
   } catch (e) {
     // Clean up partial connection
     if (_reader) { try { await _reader.cancel() } catch { /* ignore */ } _reader = null }
@@ -356,6 +375,7 @@ export async function connect(baudRate = 38400, knownPort?: any): Promise<void> 
 
 /** Gracefully disconnect — sends AI0, releases locks, closes port. */
 export async function disconnect(): Promise<void> {
+  _unwireSerialEvents()
   try { await _write('AI0') } catch { /* best-effort */ }
   _drainQueue(new Error('Disconnected'))
   if (_reader) { try { await _reader.cancel() } catch { /* ignore */ } _reader = null }
