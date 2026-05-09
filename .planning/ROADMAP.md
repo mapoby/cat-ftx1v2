@@ -12,7 +12,7 @@
 - [x] **Phase 1: Testing Foundation + Bug Fixes** - Extract and test the CAT parser; fix the three silent data-corruption paths
 - [x] **Phase 2: Browser Compatibility + Error Surface** - Gate unsupported browsers before the bundle loads; surface all command errors by name
 - [x] **Phase 3: Data Integrity — Memory Operations** - Validate every write path and disclose protocol limitations to the user
-- [ ] **Phase 4: Infrastructure Hardening** - Lock the build, remove unused deps, add CSP, migrate ACR to managed identity
+- [x] **Phase 4: Infrastructure Hardening** - Lock the build, remove unused deps, add CSP, migrate ACR to managed identity
 
 ---
 
@@ -82,10 +82,10 @@
 
 **Plans**: 4 plans
 
-- [ ] 04-01-PLAN.md — Remove magic-regexp, regenerate lockfile, switch Dockerfile to npm ci (INFRA-01, INFRA-02)
-- [ ] 04-02-PLAN.md — Add CSP header to nginx.conf server block (INFRA-03)
-- [ ] 04-03-PLAN.md — Bicep managed identity + DockerHub CI push (INFRA-04)
-- [ ] 04-04-PLAN.md — README local Docker + self-hosted Azure docs; setup.sh interactive mode (D-15, D-16, D-17)
+- [x] 04-01-PLAN.md — Remove magic-regexp, regenerate lockfile, switch Dockerfile to npm ci (INFRA-01, INFRA-02)
+- [x] 04-02-PLAN.md — Add CSP header to nginx.conf server block (INFRA-03)
+- [x] 04-03-PLAN.md — Bicep managed identity + DockerHub CI push (INFRA-04)
+- [x] 04-04-PLAN.md — README local Docker + self-hosted Azure docs; setup.sh interactive mode (D-15, D-16, D-17)
 
 ---
 
@@ -96,7 +96,7 @@
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
 | 2. Browser Compatibility + Error Surface | 2/2 | Complete | 2026-05-09 |
 | 3. Data Integrity — Memory Operations | 3/3 | Complete | 2026-05-09 |
-| 4. Infrastructure Hardening | 0/4 | Not started | - |
+| 4. Infrastructure Hardening | 4/4 | Complete | 2026-05-09 |
 
 ---
 *Roadmap created: 2026-05-08*
