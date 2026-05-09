@@ -729,48 +729,75 @@
         <span v-if="state.firmware?.sdr">Sdr: {{ state.firmware.sdr }} · </span>
         <span v-if="state.firmware?.spa1">Opt: {{ state.firmware.spa1 }} · </span>
         <span v-if="state.firmware?.fc80">Fc80: {{ state.firmware.fc80 }} · </span> Last update: {{ lastUpdateTime }}</span>
-      <button class="feedback-trigger" @click="openFeedback" title="Report a bug or request a feature">Feedback</button>
+      <button class="feedback-trigger" @click="openFeedback" title="Report a bug or request a feature">🐛 Report bug / Request a feature</button>
     </footer>
 
     <!-- ── Feedback modal ── -->
     <Teleport to="body">
       <div v-if="feedbackOpen" class="feedback-backdrop" @click.self="closeFeedback">
-        <div class="feedback-modal" role="dialog" aria-modal="true" aria-label="Send feedback">
+        <div class="feedback-modal" role="dialog" aria-modal="true" aria-label="Report bug or request feature">
           <div class="feedback-header">
-            <span class="feedback-title">Send Feedback</span>
+            <span class="feedback-title">🐛 Report bug / Request a feature</span>
             <button class="feedback-close" @click="closeFeedback" title="Close">✕</button>
           </div>
-          <div class="feedback-body">
-            <div class="feedback-types">
-              <label :class="['feedback-type-btn', { active: feedbackType === 'bug' }]">
-                <input type="radio" v-model="feedbackType" value="bug" /> Bug report
-              </label>
-              <label :class="['feedback-type-btn', { active: feedbackType === 'enhancement' }]">
-                <input type="radio" v-model="feedbackType" value="enhancement" /> Feature request
-              </label>
-              <label :class="['feedback-type-btn', { active: feedbackType === 'question' }]">
-                <input type="radio" v-model="feedbackType" value="question" /> Question
-              </label>
+
+          <!-- Tab bar -->
+          <div class="feedback-tabs">
+            <button :class="['feedback-tab', { active: feedbackTab === 'form' }]" @click="feedbackTab = 'form'">Report via... Feedback form</button>
+            <button :class="['feedback-tab', { active: feedbackTab === 'github' }]" @click="feedbackTab = 'github'">Report via... GitHub Issue</button>
+          </div>
+
+          <!-- ── Tab: Feedback form ── -->
+          <template v-if="feedbackTab === 'form'">
+            <div v-if="feedbackSent" class="feedback-body feedback-sent">
+              <div class="feedback-sent-icon">✓</div>
+              <p><strong>Thank you!</strong> Your feedback has been sent.</p>
+              <p class="feedback-note">We'll review it and get back to you if needed.</p>
+              <button class="btn btn-primary" @click="closeFeedback">Close</button>
             </div>
-            <input
-              v-model="feedbackTitle"
-              class="feedback-input"
-              type="text"
-              placeholder="Short title"
-              maxlength="100"
-            />
-            <textarea
-              v-model="feedbackBody"
-              class="feedback-textarea"
-              :placeholder="feedbackType === 'bug' ? 'What happened? Steps to reproduce?' : feedbackType === 'enhancement' ? 'What would you like added or changed?' : 'What would you like to know?'"
-              rows="5"
-            />
-            <p class="feedback-note">Opens GitHub in a new tab · Requires a GitHub account to submit</p>
-          </div>
-          <div class="feedback-footer">
-            <button class="btn" @click="closeFeedback">Cancel</button>
-            <button class="btn btn-primary" :disabled="!feedbackTitle.trim()" @click="submitFeedback">Open on GitHub</button>
-          </div>
+            <div v-else class="feedback-body">
+              <div class="feedback-types">
+                <label :class="['feedback-type-btn', { active: feedbackType === 'bug' }]">
+                  <input type="radio" v-model="feedbackType" value="bug" /> 🐛 Bug report
+                </label>
+                <label :class="['feedback-type-btn', { active: feedbackType === 'enhancement' }]">
+                  <input type="radio" v-model="feedbackType" value="enhancement" /> ✨ Feature request
+                </label>
+                <label :class="['feedback-type-btn', { active: feedbackType === 'question' }]">
+                  <input type="radio" v-model="feedbackType" value="question" /> ❓ Question
+                </label>
+              </div>
+              <input v-model="feedbackTitle" class="feedback-input" type="text" placeholder="Short title" maxlength="100" />
+              <textarea
+                v-model="feedbackBody"
+                class="feedback-textarea"
+                :placeholder="feedbackType === 'bug' ? 'What happened? Steps to reproduce?' : feedbackType === 'enhancement' ? 'What would you like added or changed?' : 'What would you like to know?'"
+                rows="5"
+              />
+              <p v-if="feedbackSendError" class="feedback-error">{{ feedbackSendError }}</p>
+              <p class="feedback-note">No account required · Sent directly to the developer</p>
+            </div>
+            <div v-if="!feedbackSent" class="feedback-footer">
+              <button class="btn" @click="closeFeedback">Cancel</button>
+              <button class="btn btn-primary" :disabled="!feedbackTitle.trim() || feedbackSending" @click="submitFeedbackForm">
+                {{ feedbackSending ? 'Sending…' : 'Send feedback' }}
+              </button>
+            </div>
+          </template>
+
+          <!-- ── Tab: GitHub Issue ── -->
+          <template v-if="feedbackTab === 'github'">
+            <div class="feedback-body feedback-github">
+              <p>Create an issue directly on the project's GitHub repository. You can describe bugs, suggest features, or ask questions.</p>
+              <a class="feedback-gh-link" href="https://github.com/mapoby/cat-ftx1v2/issues/new/choose" target="_blank" rel="noopener noreferrer" @click="closeFeedback">
+                Open a new GitHub Issue →
+              </a>
+              <p class="feedback-note">⚠ Requires a GitHub account. If you don't have one, use the Feedback form tab instead.</p>
+            </div>
+            <div class="feedback-footer">
+              <button class="btn" @click="closeFeedback">Close</button>
+            </div>
+          </template>
         </div>
       </div>
     </Teleport>
@@ -1172,18 +1199,51 @@ const knownPorts      = ref<any[]>([])
 const selectedPortIdx = ref(-1)
 const lastError = ref<string | null>(null)
 const feedbackOpen = ref(false)
+const feedbackTab = ref<'form' | 'github'>('form')
 const feedbackType = ref<'bug' | 'enhancement' | 'question'>('bug')
 const feedbackTitle = ref('')
 const feedbackBody = ref('')
-const FEEDBACK_REPO = 'mapoby/cat-ftx1v2'
-const FEEDBACK_LABELS: Record<string, string> = { bug: 'bug', enhancement: 'enhancement', question: 'question' }
-function openFeedback() { feedbackOpen.value = true }
-function closeFeedback() { feedbackOpen.value = false; feedbackTitle.value = ''; feedbackBody.value = ''; feedbackType.value = 'bug' }
-function submitFeedback() {
-  const label = FEEDBACK_LABELS[feedbackType.value]
-  const url = `https://github.com/${FEEDBACK_REPO}/issues/new?labels=${label}&title=${encodeURIComponent(feedbackTitle.value)}&body=${encodeURIComponent(feedbackBody.value)}`
-  window.open(url, '_blank', 'noopener,noreferrer')
-  closeFeedback()
+const feedbackSending = ref(false)
+const feedbackSent = ref(false)
+const feedbackSendError = ref('')
+const WEB3FORMS_KEY = 'YOUR_WEB3FORMS_KEY' // get free key at web3forms.com → enter info@narmico.com
+function openFeedback() { feedbackOpen.value = true; feedbackTab.value = 'form'; feedbackSent.value = false; feedbackSendError.value = '' }
+function closeFeedback() {
+  feedbackOpen.value = false
+  feedbackTitle.value = ''
+  feedbackBody.value = ''
+  feedbackType.value = 'bug'
+  feedbackSent.value = false
+  feedbackSendError.value = ''
+  feedbackSending.value = false
+}
+async function submitFeedbackForm() {
+  feedbackSending.value = true
+  feedbackSendError.value = ''
+  try {
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_key: WEB3FORMS_KEY,
+        subject: `[FTX-1 CAT] ${feedbackType.value.toUpperCase()}: ${feedbackTitle.value}`,
+        from_name: 'FTX-1 CAT Controller',
+        type: feedbackType.value,
+        title: feedbackTitle.value,
+        message: feedbackBody.value,
+      })
+    })
+    const data = await res.json()
+    if (data.success) {
+      feedbackSent.value = true
+    } else {
+      feedbackSendError.value = data.message || 'Submission failed. Please try again.'
+    }
+  } catch {
+    feedbackSendError.value = 'Network error. Please check your connection.'
+  } finally {
+    feedbackSending.value = false
+  }
 }
 const manualCmd = ref('')
 const manualResponse = ref('')
@@ -4032,23 +4092,24 @@ body {
 }
 
 .feedback-trigger {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-muted);
-  font-size: 11px;
-  padding: 2px 10px;
+  background: var(--accent);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: color .15s, border-color .15s;
+  transition: opacity .15s;
 }
-.feedback-trigger:hover { color: var(--accent); border-color: var(--accent); }
+.feedback-trigger:hover { opacity: .85; }
 
 .feedback-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(0,0,0,.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -4059,36 +4120,58 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  width: 440px;
+  width: 480px;
   max-width: 95vw;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  box-shadow: 0 16px 48px rgba(0,0,0,.6);
 }
 
 .feedback-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
+  padding: 14px 16px 12px;
   border-bottom: 1px solid var(--border);
 }
 
-.feedback-title { font-weight: 600; font-size: 14px; }
+.feedback-title { font-weight: 700; font-size: 15px; }
 
 .feedback-close {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   padding: 2px 4px;
 }
 .feedback-close:hover { color: var(--text); }
 
+.feedback-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.feedback-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  text-align: center;
+  margin-bottom: -1px;
+}
+.feedback-tab:hover { color: var(--text); }
+.feedback-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
 .feedback-body {
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -4104,8 +4187,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 12px;
@@ -4147,6 +4230,12 @@ body {
   margin: 0;
 }
 
+.feedback-error {
+  font-size: 12px;
+  color: #f87171;
+  margin: 0;
+}
+
 .feedback-footer {
   display: flex;
   justify-content: flex-end;
@@ -4154,6 +4243,36 @@ body {
   padding: 10px 16px 14px;
   border-top: 1px solid var(--border);
 }
+
+.feedback-sent {
+  align-items: center;
+  text-align: center;
+  padding: 28px 16px;
+}
+.feedback-sent-icon {
+  font-size: 36px;
+  color: var(--green);
+  line-height: 1;
+}
+
+.feedback-github {
+  gap: 14px;
+}
+.feedback-github p { margin: 0; font-size: 13px; line-height: 1.6; }
+
+.feedback-gh-link {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  text-decoration: none;
+  align-self: flex-start;
+  transition: opacity .15s;
+}
+.feedback-gh-link:hover { opacity: .85; }
 
 .footer-fw {
   font-family: var(--font-mono);
