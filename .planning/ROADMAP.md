@@ -11,7 +11,7 @@
 
 - [x] **Phase 1: Testing Foundation + Bug Fixes** - Extract and test the CAT parser; fix the three silent data-corruption paths
 - [x] **Phase 2: Browser Compatibility + Error Surface** - Gate unsupported browsers before the bundle loads; surface all command errors by name
-- [ ] **Phase 3: Data Integrity — Memory Operations** - Validate every write path and disclose protocol limitations to the user
+- [x] **Phase 3: Data Integrity — Memory Operations** - Validate every write path and disclose protocol limitations to the user
 - [ ] **Phase 4: Infrastructure Hardening** - Lock the build, remove unused deps, add CSP, migrate ACR to managed identity
 
 ---
