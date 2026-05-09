@@ -492,17 +492,19 @@ Source: [VERIFIED: learn.microsoft.com/azure/app-service/configure-custom-contai
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `docker/build-push-action@v6` push to multiple registries from a single step?**
    - What we know: The action accepts multiple `tags:` entries and both registries are authenticated via `docker/login-action` before the step.
    - What's unclear: Whether the action iterates all tags' registries or only the first one it identifies.
    - Recommendation: Test with a dry-run push in CI, or use two separate `docker/build-push-action` steps (one per registry) if ambiguous. The two-step approach is unambiguous and only marginally more YAML.
+   - RESOLVED: Single-step multi-registry push accepted as standard approach (accepted risk). If CI reports a DockerHub auth failure, the fallback is a second `docker/build-push-action` step for DockerHub tags only — that two-step approach is unambiguous and requires no re-planning.
 
 2. **Does the existing OIDC service principal have `Microsoft.Authorization/roleAssignments/write` permission on the ACR resource?**
    - What we know: The SP was granted `Contributor` on the resource group. Contributor does NOT include `Microsoft.Authorization/*` write.
    - What's unclear: Whether the Bicep deployment via this SP can create the `roleAssignment` resource, or whether the SP needs `Owner` or `Role Based Access Control Administrator` on the ACR.
    - Recommendation: The planner should include a step to verify/escalate the SP's permissions before running the Bicep redeploy. The role assignment step may require running separately with elevated credentials (e.g., `az role assignment create` from an Owner-privileged account) and then the Bicep redeploy omitting the `roleAssignment` resource if the SP cannot write role assignments.
+   - RESOLVED: Plan 03 Task 1 is a checkpoint:human-verify gate that resolves this at execution time. The executor verifies SP permissions before running the Bicep redeploy; if `Microsoft.Authorization/roleAssignments/write` is absent from the SP, the executor runs `az role assignment create` manually with Owner-privileged credentials first, then redeploys Bicep without the `roleAssignment` resource.
 
 ---
 
