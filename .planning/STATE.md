@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 Phase 3 — Data Integrity — Memory Operations
 
 ## Status
-In progress — plan 03-01 complete
+In progress — plan 03-02 complete
 
 ## Phases
 
@@ -46,6 +46,8 @@ In progress — plan 03-01 complete
 - readMemoryChannel parses CN resp.substring(4) directly, not from global state — BUG-02
 - Slot 0 guard placed at composable entry (not call site) — defense-in-depth before CAT bus
 - slotWriteResults cleared only at write start (not disconnect/tab switch) — preserves last result for user
+- Wipe All modal backdrop click and X button removed — only Cancel and WIPE ALL close it (DATA-03)
+- Delete Selected button opens disclosure modal; confirm handler sets dialog false before async deleteSelectedFromRadio (DATA-03)
 
 ### Blockers
 None
@@ -55,8 +57,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 3, plan 02
-Next action: /gsd-execute-phase 3 (plans 03-02 and 03-03 remain)
+Resume from: Phase 3, plan 03
+Next action: /gsd-execute-phase 3 (plan 03-03 remains)
 
 ## Last Updated
-2026-05-09 (Phase 3 plan 03-01 complete — DATA-04, DATA-02 delivered)
+2026-05-09 (Phase 3 plan 03-02 complete — DATA-03 delivered)

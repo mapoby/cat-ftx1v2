@@ -36,7 +36,7 @@
 
 - [ ] **DATA-01**: CSV import validates each row for frequency range (100,000–470,000,000 Hz), valid mode code, slot number (1–999), and tag length/character set before applying any rows; a per-row error summary is shown before import is committed
 - [ ] **DATA-02**: Each memory channel write to the radio produces per-slot feedback ("Channel N written" / "Channel N failed") visible in the UI
-- [ ] **DATA-03**: Delete and Wipe All operations display a persistent (non-dismissable until acknowledged) disclosure that deletion overwrites with blank values and does not remove the slot number from the radio
+- [x] **DATA-03**: Delete and Wipe All operations display a persistent (non-dismissable until acknowledged) disclosure that deletion overwrites with blank values and does not remove the slot number from the radio
 - [ ] **DATA-04**: Slot 0 is guarded against use as a write/delete target in all code paths
 
 ### Infrastructure
@@ -96,7 +96,7 @@
 | ERR-03 | Phase 2 | Complete |
 | DATA-01 | Phase 3 | Pending |
 | DATA-02 | Phase 3 | Pending |
-| DATA-03 | Phase 3 | Pending |
+| DATA-03 | Phase 3 | Complete |
 | DATA-04 | Phase 3 | Pending |
 | INFRA-01 | Phase 4 | Pending |
 | INFRA-02 | Phase 4 | Pending |
