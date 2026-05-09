@@ -8,9 +8,41 @@
 #
 # Customise these variables or export them before running:
 
-APP_NAME="${APP_NAME:-catftx1}"       # prefix for all Azure resources
-LOCATION="${LOCATION:-westeurope}"    # az account list-locations -o table
-GITHUB_REPO="${GITHUB_REPO:-mapoby/cat-ftx1v2}"  # owner/repo on GitHub
+# ── Default parameters (edit these for your deployment) ──────────────────────
+DEFAULT_APP_NAME="catftx1"
+DEFAULT_LOCATION="westeurope"
+DEFAULT_GITHUB_REPO="mapoby/cat-ftx1v2"
+DEFAULT_SKU="B1"
+
+# ── Interactive / non-interactive mode ────────────────────────────────────────
+# If env vars APP_NAME, LOCATION, GITHUB_REPO, SKU are already set, they take precedence.
+if [[ -n "${APP_NAME:-}" && -n "${LOCATION:-}" && -n "${GITHUB_REPO:-}" ]]; then
+  # All core vars pre-set via environment — skip interactive prompt
+  SKU="${SKU:-$DEFAULT_SKU}"
+else
+  echo "Use default values? [y/N]"
+  read -r _USE_DEFAULTS
+  _USE_DEFAULTS="${_USE_DEFAULTS:-n}"
+
+  if [[ "$_USE_DEFAULTS" =~ ^[Yy]$ ]]; then
+    APP_NAME="${APP_NAME:-$DEFAULT_APP_NAME}"
+    LOCATION="${LOCATION:-$DEFAULT_LOCATION}"
+    GITHUB_REPO="${GITHUB_REPO:-$DEFAULT_GITHUB_REPO}"
+    SKU="${SKU:-$DEFAULT_SKU}"
+  else
+    read -rp "App name [$DEFAULT_APP_NAME]: " _INPUT_APP_NAME
+    APP_NAME="${APP_NAME:-${_INPUT_APP_NAME:-$DEFAULT_APP_NAME}}"
+
+    read -rp "Location [$DEFAULT_LOCATION]: " _INPUT_LOCATION
+    LOCATION="${LOCATION:-${_INPUT_LOCATION:-$DEFAULT_LOCATION}}"
+
+    read -rp "GitHub repo [$DEFAULT_GITHUB_REPO]: " _INPUT_GITHUB_REPO
+    GITHUB_REPO="${GITHUB_REPO:-${_INPUT_GITHUB_REPO:-$DEFAULT_GITHUB_REPO}}"
+
+    read -rp "App Service SKU [$DEFAULT_SKU]: " _INPUT_SKU
+    SKU="${SKU:-${_INPUT_SKU:-$DEFAULT_SKU}}"
+  fi
+fi
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,7 +66,7 @@ echo "[2/5] Deploying infrastructure (Bicep)…"
 OUTPUTS=$(az deployment group create \
   --resource-group "$RG" \
   --template-file "${SCRIPT_DIR}/main.bicep" \
-  --parameters appName="$APP_NAME" \
+  --parameters appName="$APP_NAME" sku="$SKU" \
   --query "properties.outputs" \
   -o json)
 
@@ -115,6 +147,8 @@ echo " ── SECRETS ───────────────────�
 echo " AZURE_CLIENT_ID       = $APP_ID"
 echo " AZURE_TENANT_ID       = $TENANT"
 echo " AZURE_SUBSCRIPTION_ID = $SUBSCRIPTION"
+echo " DOCKERHUB_USERNAME    = <your DockerHub username>"
+echo " DOCKERHUB_TOKEN       = <DockerHub access token — Account Settings → Security → Access Tokens>"
 echo ""
 echo " ── VARIABLES (non-sensitive, can be in vars) ────────────────"
 echo " ACR_NAME              = $ACR_NAME"
