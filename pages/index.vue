@@ -2401,7 +2401,7 @@ function toggleSelectAll(checked: boolean) {
 async function deleteSelectedFromRadio() {
   if (chListDeleting.value || selectedSlots.value.length === 0) return
   chListDeleting.value = true
-  const slots = [...selectedSlots.value]
+  const slots = [...selectedSlots.value].filter(s => s >= 1)
   try {
     for (const slot of slots) {
       await deleteMemorySlot(slot).catch((e: any) => { lastError.value = e.message })
