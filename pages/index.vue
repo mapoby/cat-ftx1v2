@@ -534,7 +534,7 @@
             v-if="selectedSlots.length > 0"
             class="btn btn-sm btn-del chlist-action-btn"
             :disabled="chListDeleting || !state.connected"
-            @click="deleteSelectedFromRadio"
+            @click="deleteDisclosureDialog = true"
             title="Overwrite selected memory slots with blank data on the radio"
           >{{ chListDeleting ? `Deleting…` : `Delete Selected (${selectedSlots.length})` }}</button>
           <button
@@ -1043,6 +1043,25 @@
       </div>
     </Teleport>
 
+    <!-- ── Delete Selected confirmation dialog ── -->
+    <Teleport to="body">
+      <div v-if="deleteDisclosureDialog" class="tone-modal-backdrop">
+        <div class="tone-modal wipe-confirm-modal" role="dialog" aria-modal="true" aria-label="Delete Selected Channels">
+          <div class="tone-modal-header wipe-confirm-header">
+            <span class="tone-modal-title">⚠ WARNING</span>
+          </div>
+          <div class="wipe-confirm-body">
+            <p>This will overwrite <strong>{{ selectedSlots.length }} selected slot{{ selectedSlots.length === 1 ? '' : 's' }}</strong> in radio memory with blank defaults (29 MHz, USB, no SQL, empty tag).</p>
+            <p>The radio has no delete command — slots will remain but contain no useful data. This cannot be undone.</p>
+          </div>
+          <div class="wipe-confirm-actions">
+            <button class="btn btn-sm" @click="deleteDisclosureDialog = false">Cancel</button>
+            <button class="btn btn-sm btn-del" @click="deleteDisclosureDialog = false; deleteSelectedFromRadio()">DELETE SELECTED</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -1139,6 +1158,7 @@ const chListScanTo    = ref(999)
 const selectedSlots   = ref<number[]>([])
 const chListDeleting  = ref(false)
 const wipeAllDialog   = ref(false)
+const deleteDisclosureDialog = ref(false)
 const chListWiping    = ref(false)
 const slotWriteResults = ref<{ slot: number; ok: boolean; error?: string }[]>([])
 const dragSrcIdx      = ref<number | null>(null)
