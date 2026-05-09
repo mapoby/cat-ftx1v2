@@ -2506,6 +2506,7 @@ function exportCsv() {
 function triggerImport() { csvImportRef.value?.click() }
 
 function validateCsvRow(p: string[], rowNum: number): string | null {
+  if (p.length < 14) return `Row has only ${p.length} columns (expected 14)`
   const slot = parseInt(p[0])
   if (isNaN(slot) || slot < 1 || slot > 999)
     return `Slot "${p[0]}" out of range (must be 1–999)`
