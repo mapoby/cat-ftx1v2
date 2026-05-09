@@ -59,13 +59,23 @@ npm run dev          # dev server at http://localhost:3000
 npm run generate     # build static site → .output/public
 ```
 
-Run with Docker locally:
+Run with Docker (build from source):
 
 ```bash
 docker build -t cat-ftx1 .
 docker run -p 8080:80 cat-ftx1
 # open http://localhost:8080
 ```
+
+Run with Docker (pull pre-built image from DockerHub):
+
+```bash
+docker pull mapoby/cat-ftx1:latest
+docker run -p 8080:80 mapoby/cat-ftx1:latest
+# open http://localhost:8080
+```
+
+> Web Serial API requires Chrome or Edge. The `localhost` origin satisfies the HTTPS requirement, so plain HTTP on port 8080 works. Safari and Firefox are not supported.
 
 ---
 
@@ -97,6 +107,49 @@ After running, add the printed values to **GitHub → Settings → Secrets and v
 | Variable | `AZURE_WEBAPP_NAME` |
 
 The first push to `main` triggers a full build and deploy.
+
+---
+
+## Self-hosted on Azure
+
+You can deploy your own instance of this app to Azure App Service in about 10 minutes.
+
+### Prerequisites
+
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) installed and authenticated (`az login`)
+- Docker (for local builds — not needed if only deploying via CI/CD)
+- A GitHub account with a fork of this repository
+
+### Provision infrastructure
+
+```bash
+bash infra/setup.sh
+```
+
+The script prompts whether to use default values or configure interactively. It creates:
+
+1. Resource group
+2. Azure Container Registry + App Service Plan + Web App (via Bicep)
+3. Entra ID app registration and service principal
+4. OIDC federated credential bound to `refs/heads/main`
+5. Contributor + Role Based Access Control Administrator roles on the resource group
+
+### Configure GitHub Actions
+
+After the script completes, add these values to **GitHub → Settings → Secrets and variables → Actions**:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| Secret | `AZURE_CLIENT_ID` | Printed by setup.sh |
+| Secret | `AZURE_TENANT_ID` | Printed by setup.sh |
+| Secret | `AZURE_SUBSCRIPTION_ID` | Printed by setup.sh |
+| Secret | `DOCKERHUB_USERNAME` | Your DockerHub username |
+| Secret | `DOCKERHUB_TOKEN` | DockerHub access token (Account Settings → Security → Access Tokens) |
+| Variable | `ACR_NAME` | Printed by setup.sh |
+| Variable | `ACR_LOGIN_SERVER` | Printed by setup.sh |
+| Variable | `AZURE_WEBAPP_NAME` | Printed by setup.sh |
+
+The first push to `main` builds the image, pushes to ACR, and deploys to your Web App.
 
 ---
 
