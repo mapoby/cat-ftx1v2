@@ -508,7 +508,7 @@
           spellcheck="false"
         />
         <button class="btn btn-primary btn-sm" @click="sendManualCommand" title="Send raw CAT command to radio">Send</button>
-        <span class="cmd-response" v-if="manualResponse">→ {{ manualResponse }}</span>
+        <span class="cmd-response" :class="{ 'cmd-response--error': manualResponseError }" v-if="manualResponse">→ {{ manualResponse }}</span>
       </section>
 
       </div><!-- end dashboard tab -->
@@ -1076,6 +1076,7 @@ const selectedPortIdx = ref(-1)
 const lastError = ref<string | null>(null)
 const manualCmd = ref('')
 const manualResponse = ref('')
+const manualResponseError = ref(false)
 const presets = ref<Preset[]>([])
 const funcKnobBusy = ref(false)
 const speechProcBusy = ref(false)
@@ -2099,12 +2100,13 @@ async function sendManualCommand() {
   const cmd = manualCmd.value.trim()
   if (!cmd) return
   manualResponse.value = '…'
+  manualResponseError.value = false
   try {
     const resp = await sendAndWait(cmd)
     manualResponse.value = resp || 'OK'
   } catch (e: any) {
-    manualResponse.value = ''
-    lastError.value = e.message
+    manualResponse.value = e.message
+    manualResponseError.value = true
   }
 }
 
@@ -3565,10 +3567,14 @@ body {
   padding: 3px 8px;
   background: rgba(63,185,80,.08);
   border-radius: 4px;
-  max-width: 300px;
+  max-width: 400px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.cmd-response--error {
+  color: #f85149;
+  background: rgba(248,81,73,.08);
 }
 
 /* ── Idle screen ── */
