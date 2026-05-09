@@ -489,6 +489,7 @@ export async function scanMemoryChannels(from = 1, to = 99): Promise<void> {
 }
 
 export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig): Promise<void> {
+  if (slot === 0) throw new Error('Slot 0 is not a valid memory channel')
   const slotStr   = String(slot).padStart(5, '0')
   const freqStr   = String(config.freq).padStart(9, '0')
   const modeCode  = MODE_CODE[config.mode ?? ''] ?? '2'
@@ -519,6 +520,7 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
 // Best available: overwrite the slot with blank defaults (29 MHz, USB, no SQL, empty tag).
 // The slot stays in radio memory but with no useful content.
 export async function deleteMemorySlot(slot: number): Promise<void> {
+  if (slot === 0) throw new Error('Slot 0 is not a valid memory channel')
   const slotStr = String(slot).padStart(5, '0')
   await send('VM000')
   await send('FA029000000')
