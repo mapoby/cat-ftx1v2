@@ -1163,7 +1163,10 @@ const chListWiping    = ref(false)
 const slotWriteResults = ref<{ slot: number; ok: boolean; error?: string }[]>([])
 const dragSrcIdx      = ref<number | null>(null)
 const dragOverIdx     = ref<number | null>(null)
-const csvImportRef    = ref<HTMLInputElement | null>(null)
+const csvImportRef         = ref<HTMLInputElement | null>(null)
+const csvValidationErrors  = ref<{ row: number; reason: string }[]>([])
+const csvPendingRows       = ref<EditableChannel[]>([])
+const csvConfirmDialog     = ref(false)
 
 interface RsgbEntry {
   id: number
@@ -2470,47 +2473,73 @@ function exportCsv() {
 
 function triggerImport() { csvImportRef.value?.click() }
 
+function validateCsvRow(p: string[], rowNum: number): string | null {
+  const slot = parseInt(p[0])
+  if (isNaN(slot) || slot < 1 || slot > 999)
+    return `Slot "${p[0]}" out of range (must be 1–999)`
+  const freq = Math.round(parseFloat(p[1]) * 1_000_000)
+  if (isNaN(freq) || freq < 100_000 || freq > 470_000_000)
+    return `RX freq "${p[1]}" out of range (0.1–470 MHz)`
+  const validModes = new Set(MODES.map(m => m.label))
+  if (p[4] && !validModes.has(p[4]))
+    return `Mode "${p[4]}" is not a valid FTX-1 mode`
+  const tag = p[13] ?? ''
+  if (tag.length > 12 || /[^\x20-\x7E]/.test(tag))
+    return `Tag "${tag.substring(0, 20)}" exceeds 12 chars or contains non-printable characters`
+  return null
+}
+
 async function onImportCsv(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   const text = await file.text()
   const SQL_LABELS   = ['None', 'CTCSS ENC/DEC', 'CTCSS ENC', 'DCS', 'PR FREQ', 'REV TONE']
   const SHIFT_LABELS = ['Simplex', '+', '-']
-  const rows: EditableChannel[] = []
+  const errors: { row: number; reason: string }[] = []
+  const validRows: EditableChannel[] = []
   const validModes = new Set(MODES.map(m => m.label))
+  let rowNum = 0
   for (const line of text.split(/\r?\n/).slice(1)) {
     if (!line.trim()) continue
+    rowNum++
     const p = parseCsvLine(line)
-    const slot  = parseInt(p[0])
-    const freq  = Math.round(parseFloat(p[1]) * 1_000_000)
-    if (isNaN(slot) || slot < 1 || slot > 999 || isNaN(freq) || freq <= 0) continue
-    const txFreqRaw = parseFloat(p[2])
-    const txFreq    = !isNaN(txFreqRaw) && txFreqRaw > 0 ? Math.round(txFreqRaw * 1_000_000) : null
-    const splitMem  = p[3] === '1'
-    const sqlType   = SQL_LABELS.indexOf(p[5])
-    const ctcssHz   = parseFloat(p[6])
-    const ctcssIdx  = !isNaN(ctcssHz) ? CTCSS_TONES.indexOf(ctcssHz) : -1
-    const dcsCode   = parseInt(p[7])
-    const dcsIdx    = !isNaN(dcsCode) ? DCS_CODES.indexOf(dcsCode) : -1
-    const shift     = Math.max(0, SHIFT_LABELS.indexOf(p[8]))
-    const clarDir   = p[9] === '-' ? '-' : '+'
+    const err = validateCsvRow(p, rowNum)
+    if (err) { errors.push({ row: rowNum, reason: err }); continue }
+    const slot       = parseInt(p[0])
+    const freq       = Math.round(parseFloat(p[1]) * 1_000_000)
+    const txFreqRaw  = parseFloat(p[2])
+    const txFreq     = !isNaN(txFreqRaw) && txFreqRaw > 0 ? Math.round(txFreqRaw * 1_000_000) : null
+    const splitMem   = p[3] === '1'
+    const sqlType    = SQL_LABELS.indexOf(p[5])
+    const ctcssHz    = parseFloat(p[6])
+    const ctcssIdx   = !isNaN(ctcssHz) ? CTCSS_TONES.indexOf(ctcssHz) : -1
+    const dcsCode    = parseInt(p[7])
+    const dcsIdx     = !isNaN(dcsCode) ? DCS_CODES.indexOf(dcsCode) : -1
+    const shift      = Math.max(0, SHIFT_LABELS.indexOf(p[8]))
+    const clarDir    = p[9] === '-' ? '-' : '+'
     const clarOffset = parseInt(p[10]) || 0
-    rows.push({
+    validRows.push({
       slot, freq, txFreq, splitMem,
-      mode:       (validModes.has(p[4]) ? p[4] : null) || 'USB',
-      sqlType:    sqlType >= 0 ? sqlType : 0,
-      ctcssIdx:   ctcssIdx >= 0 ? ctcssIdx : null,
-      dcsIdx:     dcsIdx   >= 0 ? dcsIdx   : null,
+      mode:      validModes.has(p[4]) ? p[4] : 'USB',
+      sqlType:   sqlType >= 0 ? sqlType : 0,
+      ctcssIdx:  ctcssIdx >= 0 ? ctcssIdx : null,
+      dcsIdx:    dcsIdx   >= 0 ? dcsIdx   : null,
       clarDir, clarOffset,
       rxClar: p[11] === '1',
       txClar: p[12] === '1',
       shift,
-      tag:   p[13]?.substring(0, 12) ?? '',
+      tag:   p[13] ?? '',
       dirty: true,
     })
   }
-  if (rows.length) channelListRows.value = rows.sort((a, b) => a.slot - b.slot)
   if (csvImportRef.value) csvImportRef.value.value = ''
+  if (errors.length > 0) {
+    csvValidationErrors.value = errors
+    csvPendingRows.value      = validRows
+    csvConfirmDialog.value    = true
+    return
+  }
+  if (validRows.length) channelListRows.value = validRows.sort((a, b) => a.slot - b.slot)
 }
 
 async function readAllFromRadio() {
