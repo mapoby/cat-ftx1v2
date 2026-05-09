@@ -3,8 +3,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --prefer-offline
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 ARG APP_VERSION=dev

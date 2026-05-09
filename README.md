@@ -18,7 +18,6 @@ The app eliminates navigating transceiver menus by exposing all controls graphic
 | Build output | Static files via `nuxt generate` → `.output/public` |
 | Language | TypeScript 5, Vue 3 Composition API |
 | Serial | Browser-native [Web Serial API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API) — no backend required |
-| Pattern matching | [magic-regexp](https://github.com/danielroe/magic-regexp) v0.11 for CAT response parsing |
 
 ### Container
 
