@@ -4,13 +4,13 @@
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** A connected operator can control every aspect of their FTX-1 from a browser tab without touching the radio.
-**Current focus:** Phase 1
+**Current focus:** Phase 2
 
 ## Current Phase
 Phase 2 — Browser Compatibility + Error Surface
 
 ## Status
-Ready to plan
+In progress — Plan 01 complete
 
 ## Phases
 
@@ -23,8 +23,8 @@ Ready to plan
 
 ## Performance Metrics
 
-- Plans completed: 6
-- Requirements delivered: 10/23
+- Plans completed: 7
+- Requirements delivered: 12/23
 - Phases completed: 1/4
 
 ## Accumulated Context
@@ -36,6 +36,8 @@ Ready to plan
 - MODE_CODE must be imported alongside parseResponse in useSerial.ts (writeMemoryChannel uses it)
 - Use `!= null` (not `!== undefined`) to narrow `number | null` to `number` for _fireScopeRequery
 - Each toggle function owns its own busy flag — no shared flags between unrelated toggles
+- Browser gate uses tagPriority:critical IIFE in app.head.script — runs before Nuxt module bundle
+- Two distinct gate messages: HTTPS-required (COMPAT-02) vs wrong-browser (COMPAT-01)
 - Tab lifecycle sends AI0 (disable auto-info) on entry to channels tab, AI1 on exit
 - TX gate during scan via existing connected/clickable props — no new component props needed
 - scanMemoryChannels disables AI mode (AI0) before bulk read and re-enables (AI1) in finally — BUG-04
@@ -50,8 +52,8 @@ None
 
 ## Session Continuity
 
-Resume from: Phase 2 (Phase 1 verified — 5/5 must-haves passed)
-Next action: /gsd-discuss-phase 2 or /gsd-plan-phase 2
+Resume from: Phase 2, Plan 02 (02-01 complete — browser gate + compat-warning removal)
+Next action: Execute 02-02 (error surface)
 
 ## Last Updated
-2026-05-08 (Phase 1 verified and complete)
+2026-05-09 (02-01 complete — COMPAT-01 and COMPAT-02 delivered)

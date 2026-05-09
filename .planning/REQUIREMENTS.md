@@ -23,8 +23,8 @@
 
 ### Browser Compatibility
 
-- [ ] **COMPAT-01**: An inline `<script>` before the Nuxt bundle detects Web Serial API support and renders a blocking full-page message for unsupported browsers, distinguishing "wrong browser" from "page served over HTTP/non-localhost"
-- [ ] **COMPAT-02**: When `isSupported` is false due to a non-secure context (HTTP on non-localhost), the error message explains that HTTPS is required and Web Serial is not a configuration issue
+- [x] **COMPAT-01**: An inline `<script>` before the Nuxt bundle detects Web Serial API support and renders a blocking full-page message for unsupported browsers, distinguishing "wrong browser" from "page served over HTTP/non-localhost"
+- [x] **COMPAT-02**: When `isSupported` is false due to a non-secure context (HTTP on non-localhost), the error message explains that HTTPS is required and Web Serial is not a configuration issue
 
 ### Error Surface
 
@@ -89,8 +89,8 @@
 | BUG-03 | Phase 1 | Pending |
 | BUG-04 | Phase 1 | Pending |
 | BUG-05 | Phase 1 | Pending |
-| COMPAT-01 | Phase 2 | Pending |
-| COMPAT-02 | Phase 2 | Pending |
+| COMPAT-01 | Phase 2 | Complete |
+| COMPAT-02 | Phase 2 | Complete |
 | ERR-01 | Phase 2 | Pending |
 | ERR-02 | Phase 2 | Pending |
 | ERR-03 | Phase 2 | Pending |

@@ -51,7 +51,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Browser compatibility gate: inline script + remove old banner (COMPAT-01, COMPAT-02)
+- [x] 02-01-PLAN.md — Browser compatibility gate: inline script + remove old banner (COMPAT-01, COMPAT-02)
 - [ ] 02-02-PLAN.md — Error surface: ?; and timeout messages + disconnect event (ERR-01, ERR-02, ERR-03)
 
 ### Phase 3: Data Integrity — Memory Operations
@@ -84,7 +84,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation + Bug Fixes | 6/6 | Complete | 2026-05-08 |
-| 2. Browser Compatibility + Error Surface | 0/2 | Not started | - |
+| 2. Browser Compatibility + Error Surface | 1/2 | In progress | - |
 | 3. Data Integrity — Memory Operations | 0/? | Not started | - |
 | 4. Infrastructure Hardening | 0/? | Not started | - |
 
