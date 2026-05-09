@@ -1083,7 +1083,7 @@
           </div>
           <div class="wipe-confirm-actions">
             <button class="btn btn-sm" @click="csvConfirmDialog = false; csvPendingRows = []; csvValidationErrors = []">Fix CSV</button>
-            <button v-if="csvPendingRows.length" class="btn btn-sm btn-primary" @click="channelListRows = csvPendingRows.sort((a, b) => a.slot - b.slot); csvConfirmDialog = false; csvPendingRows = []; csvValidationErrors = []">Import Valid Rows Only</button>
+            <button v-if="csvPendingRows.length" class="btn btn-sm btn-primary" @click="channelListRows = csvPendingRows.sort((a, b) => a.slot - b.slot); csvConfirmDialog = false; csvPendingRows = []; csvValidationErrors = []">Replace With Valid Rows</button>
           </div>
         </div>
       </div>
