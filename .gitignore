@@ -18,6 +18,8 @@ logs
 .DS_Store
 .idea
 CLAUDE.md
+.claude/
+.planning/
 
 # Local env files
 .env
