@@ -7,13 +7,14 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 **Current focus:** Phase 3
 
 ## Current Phase
-Phase 4 — Infrastructure Hardening
+Phase 5 — Launch Assets
 
 ## Status
-Complete — all 4 plans delivered, CI green, milestone finished
+Not started — milestone v2 Community Launch planned, ready to begin Phase 5
 
-## Phases
+## Milestones
 
+### v1 Production Hardening — Complete (2026-05-09)
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | Testing Foundation + Bug Fixes | Complete |
@@ -21,11 +22,18 @@ Complete — all 4 plans delivered, CI green, milestone finished
 | 3 | Data Integrity — Memory Operations | Complete |
 | 4 | Infrastructure Hardening | Complete |
 
+### v2 Community Launch — In Progress
+| Phase | Name | Status |
+|-------|------|--------|
+| 5 | Launch Assets | Not started |
+| 6 | Ham Radio Communities | Not started |
+| 7 | Extended Reach | Not started |
+
 ## Performance Metrics
 
-- Plans completed: 14
-- Requirements delivered: 22/23
-- Phases completed: 4/4
+- Plans completed: 14 (v1)
+- Requirements delivered: 22/23 (v1)
+- Phases completed: 4/4 (v1)
 
 ## Accumulated Context
 
