@@ -1,0 +1,9 @@
+Slot,RX Freq (MHz),TX Freq (MHz),Split,Mode,SQL Type,CTCSS (Hz),DCS,Shift,Clar Dir,Clar Offset,RX Clar,TX Clar,Tag
+5,145.500,,,FM,None,,,Simplex,+,0,0,0,Repeater
+10,14.225,,,USB,None,,,Simplex,+,0,0,0,20m SSB
+20,438.800,,,FM,None,,,Simplex,+,0,0,0,Valid UHF
+0,145.500,,,FM,None,,,Simplex,+,0,0,0,Slot Zero Bad
+50,99.000,,,FM,None,,,Simplex,+,0,0,0,Freq Too Low
+60,500.000,,,FM,None,,,Simplex,+,0,0,0,Freq Too High
+70,145.500,,,INVALID,None,,,Simplex,+,0,0,0,Bad Mode
+80,145.500,,,FM,None,,,Simplex,+,0,0,0,This Tag Is Way Too Long To Be Valid
