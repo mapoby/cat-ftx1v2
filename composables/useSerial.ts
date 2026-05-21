@@ -505,9 +505,10 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
     await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
   if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
     await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
+  await send('VM011')
   await send('MC0' + slotStr)
-  await send('VM000')
   await send('AM')
+  await send('VM000')
   await new Promise(r => setTimeout(r, 150))
   await send('MZ' + slotStr + splitBit + txFreqStr)
   if (config.tag != null) {
