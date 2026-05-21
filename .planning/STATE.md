@@ -11,10 +11,10 @@ Phase 8 — Channel Lists
 
 ## Current Plan
 
-Plan 1 — Complete (08-01-PLAN.md)
+Plan 2 — Complete (08-02-PLAN.md)
 
 ## Status
-In progress — 08-01 complete, 08-02 and 08-03 pending
+In progress — 08-01 and 08-02 complete, 08-03 pending
 
 ## Milestones
 
@@ -66,6 +66,9 @@ In progress — 08-01 complete, 08-02 and 08-03 pending
 - validateChannelList is permissive on optional fields, strict on freq range and required string fields
 - vitest.config.mts extended to include composables/**/*.test.ts; jsdom devDep added for @vitest-environment jsdom
 - FT8 entries in iaru-r1-hf.json use mode=USB with descriptive tag (FT8 is not a native FTX-1 mode label)
+- Import dialog reuses all rsgb-* CSS classes — no new styles needed
+- initLists() called before loadPresets() in onMounted so lists are ready when dialog opens
+- watch(listImportSelectedList) resets selection set on list switch
 
 ### Blockers
 None
@@ -75,7 +78,7 @@ None
 
 ## Session Continuity
 
-08-01-PLAN.md complete. Next: 08-02-PLAN.md — "Import from List" dialog in index.vue.
+08-02-PLAN.md complete. Next: 08-03-PLAN.md — "Manage Lists" dialog (CRUD, remote URL, export, file import).
 
 ## Last Updated
-2026-05-21 (Phase 8 plan 1 complete — useLists composable + bundled preset JSON files)
+2026-05-21 (Phase 8 plan 2 complete — Import from List dialog wired into index.vue)

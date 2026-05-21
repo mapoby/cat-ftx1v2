@@ -552,6 +552,8 @@
           <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length" title="Export channel list to CSV file">Export CSV</button>
           <button class="btn btn-sm" @click="triggerImport" title="Import channels from a CSV file">Import CSV</button>
           <input ref="csvImportRef" type="file" accept=".csv,text/csv" class="csv-hidden-input" @change="onImportCsv" />
+          <input ref="listJsonImportRef" type="file" accept=".json,application/json" class="csv-hidden-input" @change="onImportListFile" />
+          <button class="btn btn-sm" @click="manageListsDialog = true" title="Create, edit and delete channel lists">Manage Lists</button>
           <span class="chlist-count" v-if="channelListRows.length">{{ channelListRows.length }} channels</span>
         </div>
 
@@ -1280,7 +1282,7 @@ interface Preset {
 }
 
 const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel, deleteMemorySlot } = useSerial()
-const { allLists, initLists } = useLists()
+const { allLists, initLists, createList, renameList, deleteList, fetchRemoteList, exportList, importListFromText } = useLists()
 const appVersion      = useRuntimeConfig().public.appVersion
 const buildDate       = useRuntimeConfig().public.buildDate
 const selectedBaud    = ref(38400)
@@ -1431,6 +1433,17 @@ const listImportSelectedList = ref<ChannelList | null>(null)
 const listImportSelected     = ref<Set<number>>(new Set())
 const listImportAddFromSlot  = ref(1)
 const listImportOverwrite    = ref(false)
+
+const manageListsDialog     = ref(false)
+const manageListsError      = ref<string | null>(null)
+const manageListsFetching   = ref(false)
+const addRemoteUrl          = ref('')
+const newListName           = ref('')
+const renamingListId        = ref<string | null>(null)
+const renamingListName      = ref('')
+const listJsonImportRef     = ref<HTMLInputElement | null>(null)
+const listImportFileError   = ref<string | null>(null)
+
 const repInfoDialog   = ref(false)
 const repInfoLoading  = ref(false)
 const repInfoResults  = ref<RsgbEntry[]>([])
@@ -3024,6 +3037,63 @@ function importFromList() {
 watch(listImportSelectedList, () => {
   listImportSelected.value = new Set()
 })
+
+function triggerListImport() {
+  listJsonImportRef.value?.click()
+}
+
+async function onImportListFile(event: Event) {
+  listImportFileError.value = null
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    importListFromText(text)
+  } catch (e: any) {
+    listImportFileError.value = String(e.message ?? 'Invalid file')
+  }
+  if (listJsonImportRef.value) listJsonImportRef.value.value = ''
+}
+
+async function addListFromUrl() {
+  const url = addRemoteUrl.value.trim()
+  if (!url) return
+  manageListsFetching.value = true
+  manageListsError.value = null
+  try {
+    await fetchRemoteList(url)
+    addRemoteUrl.value = ''
+  } catch (e: any) {
+    manageListsError.value = String(e.message ?? 'Fetch failed')
+  } finally {
+    manageListsFetching.value = false
+  }
+}
+
+function startRename(list: ChannelList) {
+  renamingListId.value = list.id
+  renamingListName.value = list.name
+}
+
+function confirmRename() {
+  if (renamingListId.value && renamingListName.value.trim()) {
+    renameList(renamingListId.value, renamingListName.value.trim())
+  }
+  renamingListId.value = null
+  renamingListName.value = ''
+}
+
+function cancelRename() {
+  renamingListId.value = null
+  renamingListName.value = ''
+}
+
+function doCreateList() {
+  const name = newListName.value.trim()
+  if (!name) return
+  createList(name)
+  newListName.value = ''
+}
 
 async function scanRadioMemory() {
   if (radioMemScanning.value) return
