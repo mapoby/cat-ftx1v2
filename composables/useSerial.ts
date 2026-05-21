@@ -497,23 +497,45 @@ export async function writeMemoryChannel(slot: number, config: MemoryWriteConfig
   const splitBit  = (config.splitMem && config.txFreq != null) ? '1' : '0'
   const txFreqStr = String(config.txFreq ?? config.freq).padStart(9, '0')
 
-  await send('VM000')
-  await send('FA' + freqStr)
-  await send('MD0' + modeCode)
-  await send('CT0' + String(sqlType))
-  if (sqlType >= 1 && sqlType <= 2 && config.ctcssIdx != null)
-    await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
-  if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
-    await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
-  await send('MC0' + slotStr)
-  await send('VM000')
-  await send('AM')
-  await new Promise(r => setTimeout(r, 150))
+  // MR P8 (sqlCode in MW) uses different ordering than CT P2 — see CAT-notes.md
+  const mrSqlCode = [0, 2, 1, 3, 4, 5][sqlType] ?? 0
+
+  // MW creates/overwrites the slot unconditionally — MC0 rejects empty slots so
+  // MW must come first. Payload mirrors MR response format (27 chars).
+  const clarDir = config.clarDir ?? '+'
+  const clarOff = String(config.clarOffset ?? 0).padStart(4, '0')
+  const rxClar  = config.rxClar  ? '1' : '0'
+  const txClar  = config.txClar  ? '1' : '0'
+  const shift   = config.shift   != null ? String(config.shift) : '0'
+  await send('MW' + slotStr + freqStr + clarDir + clarOff + rxClar + txClar
+                  + modeCode + '1' + String(mrSqlCode) + '00' + shift)
+  await new Promise(r => setTimeout(r, 100))
+
+  // MW has no field for CTCSS/DCS tone index — use VFO+CN+MC0+AM to write tone.
+  // MC0 succeeds now because the slot was just created by MW.
+  const needTone = (sqlType >= 1 && sqlType <= 2 && config.ctcssIdx != null)
+                || (sqlType >= 3 && sqlType <= 5 && config.dcsIdx    != null)
+  if (needTone) {
+    await send('VM000')
+    await send('FA' + freqStr)
+    await send('MD0' + modeCode)
+    await send('CT0' + String(sqlType))
+    if (sqlType >= 1 && sqlType <= 2 && config.ctcssIdx != null)
+      await send('CN00' + String(config.ctcssIdx).padStart(3, '0'))
+    if (sqlType >= 3 && sqlType <= 5 && config.dcsIdx != null)
+      await send('CN01' + String(config.dcsIdx).padStart(3, '0'))
+    await send('MC0' + slotStr)
+    await send('VM000')
+    await send('AM')
+    await new Promise(r => setTimeout(r, 200))
+  }
+
   await send('MZ' + slotStr + splitBit + txFreqStr)
   if (config.tag != null) {
     const tag = config.tag.substring(0, 12).padEnd(12, ' ')
     await send('MT' + slotStr + tag)
   }
+  await new Promise(r => setTimeout(r, 100))
 }
 
 // FTX-1 CAT has no per-slot delete command (MW only accepts P7=1; P7=0/4 return ?;).

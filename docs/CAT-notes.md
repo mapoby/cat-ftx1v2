@@ -24,21 +24,44 @@ Must be in VFO mode before setting VFO parameters.
 
 ## Write memory channel (confirmed working)
 
-Set all parameters on VFO first, then select slot and commit:
+**MC0 rejects empty/uninitialized slots with `?;`.** MW must be used first to create the slot,
+after which MC0 can select it. For channels with no CTCSS/DCS tone, MW alone is sufficient.
+
+### Channels without CTCSS/DCS (sqlType = 0)
 
 ```
-VM000               ensure VFO mode
-FA{rxFreq}          RX frequency (9 digits, Hz)
-MD0{modeCode}       mode (B=FM-N, 4=FM, H=C4FM-DN, 2=USB, etc.)
-CT0{sqlType}        SQL type (0=off, 1=CTCSS ENC, 2=CTCSS ENC/DEC, 3=DCS)
-CN00{idx}           CTCSS tone index 000-049 (only if sqlType 1-2)
-CN01{idx}           DCS code index 000-103 (only if sqlType 3)
-MC0{slot}           select target slot → switches to memory mode, preserves VFO register
-VM000               switch back to VFO mode (VFO register is intact)
-AM                  store VFO → slot selected by MC0 (works in VFO mode only)
-MZ{slot}{split}{txFreq}   write split TX freq (AM does not cover this)
+MW{payload}         direct slot write — creates or overwrites without needing slot to exist
+MZ{slot}{split}{txFreq}   write split TX freq
 MT{slot}{tag}       write tag — up to 12 ASCII chars, space-padded
 ```
+
+### Channels with CTCSS/DCS tone (sqlType 1-5)
+
+MW has no field for tone index, so AM is needed after MW to commit the tone:
+
+```
+MW{payload}         create/overwrite slot first (MC0 won't work on empty slot)
+VM000               ensure VFO mode
+FA{rxFreq}          RX frequency
+MD0{modeCode}       mode
+CT0{sqlType}        SQL type (1=CTCSS ENC, 2=CTCSS ENC/DEC, 3=DCS, etc.)
+CN00{idx}           CTCSS tone index 000-049 (if sqlType 1-2)
+CN01{idx}           DCS code index 000-103   (if sqlType 3-5)
+MC0{slot}           select slot (now works because MW created it)
+VM000               switch back to VFO mode (VFO register intact)
+AM                  store VFO → slot (writes tone index; works in VFO mode only)
+MZ{slot}{split}{txFreq}   write split TX freq
+MT{slot}{tag}       write tag
+```
+
+### MW payload format (27 chars, same layout as MR response)
+
+```
+slotStr(5) + freqStr(9) + clarDir(1) + clarOff(4) + rxClar(1) + txClar(1)
++ modeCode(1) + '1'(P7=memory) + mrSqlCode(1) + '00' + shift(1)
+```
+
+Note: mrSqlCode uses MR P8 encoding, **not** CT P2 encoding (see table below).
 
 **Key behaviour of MC0:** selecting a slot switches the radio to memory mode and loads that
 slot's data into the *display*, but the underlying VFO register is preserved. `VM000` after
