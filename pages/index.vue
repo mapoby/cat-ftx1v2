@@ -548,6 +548,7 @@
           <div class="chlist-toolbar-sep" />
           <button class="btn btn-sm" @click="addNewChannel" title="Add a blank channel row to the table">+ Add Channel</button>
           <button class="btn btn-sm" @click="rsgbDialog = true" title="Search the RSGB repeater database and import channels">+ Add from RSGB</button>
+          <button class="btn btn-sm" @click="listImportDialog = true" title="Import channels from a saved channel list">+ Add from List</button>
           <button class="btn btn-sm" @click="exportCsv" :disabled="!channelListRows.length" title="Export channel list to CSV file">Export CSV</button>
           <button class="btn btn-sm" @click="triggerImport" title="Import channels from a CSV file">Import CSV</button>
           <input ref="csvImportRef" type="file" accept=".csv,text/csv" class="csv-hidden-input" @change="onImportCsv" />
@@ -1166,6 +1167,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useSerial, sendAndWait, type TransceiverState, type CommandResult, type RadioChannel } from '~/composables/useSerial'
+import { useLists, type ChannelList } from '~/composables/useLists'
 import presetsData from '~/cat-presets.json'
 import SMeter from '~/components/SMeter.vue'
 import LevelBar from '~/components/LevelBar.vue'
@@ -1192,6 +1194,7 @@ interface Preset {
 }
 
 const { state, connecting, isSupported, connect, disconnect, send, sendPreset, getKnownPorts, readMemoryChannel, scanMemoryChannels, writeMemoryChannel, deleteMemorySlot } = useSerial()
+const { allLists, initLists } = useLists()
 const appVersion      = useRuntimeConfig().public.appVersion
 const buildDate       = useRuntimeConfig().public.buildDate
 const selectedBaud    = ref(38400)
@@ -1336,6 +1339,12 @@ const rsgbLoading     = ref(false)
 const rsgbError       = ref<string | null>(null)
 const rsgbAddFromSlot = ref(1)
 const rsgbOverwrite   = ref(false)
+
+const listImportDialog       = ref(false)
+const listImportSelectedList = ref<ChannelList | null>(null)
+const listImportSelected     = ref<Set<number>>(new Set())
+const listImportAddFromSlot  = ref(1)
+const listImportOverwrite    = ref(false)
 const repInfoDialog   = ref(false)
 const repInfoLoading  = ref(false)
 const repInfoResults  = ref<RsgbEntry[]>([])
@@ -2410,6 +2419,12 @@ const rsgbSelectedChannelCount = computed(() =>
     .reduce((n, e) => n + (e.modeCodes.includes('A') ? 1 : 0) + (e.modeCodes.includes('F') ? 1 : 0), 0)
 )
 
+const listImportAllSelected = computed(() => {
+  const count = listImportSelectedList.value?.entries.length ?? 0
+  return count > 0 && listImportSelected.value.size === count
+})
+const listImportSelectedCount = computed(() => listImportSelected.value.size)
+
 function saveChannelList() {
   try { localStorage.setItem('cat_channel_list', JSON.stringify(channelListRows.value)) } catch { /* quota */ }
 }
@@ -2954,6 +2969,7 @@ onMounted(async () => {
   if (savedBaud) selectedBaud.value = Number(savedBaud)
   loadChannels()
   loadChannelList()
+  await initLists()
   loadPresets()
   knownPorts.value = await getKnownPorts()
   const savedVidPid = localStorage.getItem('cat_port_vid_pid')
