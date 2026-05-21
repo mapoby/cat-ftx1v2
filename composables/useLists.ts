@@ -63,6 +63,7 @@ function loadUserLists(): void {
 
 async function initLists(): Promise<void> {
   loadUserLists()
+  bundledLists.value = []
   try {
     const res = await fetch('/lists/index.json')
     if (!res.ok) {
@@ -168,8 +169,10 @@ function exportList(list: ChannelList): void {
   const a = document.createElement('a')
   a.href = url
   a.download = list.name.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.json'
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function importListFromText(text: string): ChannelList {

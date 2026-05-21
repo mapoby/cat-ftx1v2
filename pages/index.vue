@@ -1075,6 +1075,7 @@
             <strong>{{ listImportSelectedCount }} selected</strong>
           </div>
           <div v-else-if="!allLists.length" class="rsgb-no-match">No lists available.</div>
+          <div v-if="listImportWarning" class="rsgb-error">{{ listImportWarning }}</div>
 
           <!-- Entry table -->
           <div v-if="listImportSelectedList?.entries.length" class="rsgb-table-wrap">
@@ -1510,6 +1511,7 @@ const listImportSelectedList = ref<ChannelList | null>(null)
 const listImportSelected     = ref<Set<number>>(new Set())
 const listImportAddFromSlot  = ref(1)
 const listImportOverwrite    = ref(false)
+const listImportWarning      = ref<string | null>(null)
 
 const manageListsDialog     = ref(false)
 const manageListsError      = ref<string | null>(null)
@@ -3066,6 +3068,7 @@ function listToggleEntry(idx: number, checked: boolean) {
 
 function importFromList() {
   if (!listImportSelectedList.value) return
+  listImportWarning.value = null
   const entries = listImportSelectedList.value.entries
   const selectedEntries = entries.filter((_, i) => listImportSelected.value.has(i))
   const existingSlots = new Set(channelListRows.value.map(r => r.slot))
@@ -3099,6 +3102,8 @@ function importFromList() {
     nextSlot++
   }
 
+  const skipped = selectedEntries.length - newRows.length
+
   if (listImportOverwrite.value) {
     const rowMap = new Map(channelListRows.value.map(r => [r.slot, r]))
     for (const nr of newRows) rowMap.set(nr.slot, nr)
@@ -3107,12 +3112,21 @@ function importFromList() {
     channelListRows.value = [...channelListRows.value, ...newRows].sort((a, b) => a.slot - b.slot)
   }
 
+  if (skipped > 0) {
+    listImportWarning.value = `Added ${newRows.length} channel${newRows.length !== 1 ? 's' : ''}. ${skipped} skipped — no free slots from ${listImportAddFromSlot.value} to 999. Enable "Overwrite existing" or choose an earlier start slot.`
+    return
+  }
+
   listImportSelected.value = new Set()
   listImportDialog.value = false
 }
 
 watch(listImportSelectedList, () => {
   listImportSelected.value = new Set()
+  listImportWarning.value = null
+})
+watch(listImportDialog, (open) => {
+  if (!open) listImportWarning.value = null
 })
 
 function triggerListImport() {
