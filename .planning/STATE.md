@@ -11,10 +11,10 @@ Phase 8 — Channel Lists
 
 ## Current Plan
 
-Plan 2 — Complete (08-02-PLAN.md)
+Plan 3 — Complete (08-03-PLAN.md)
 
 ## Status
-In progress — 08-01 and 08-02 complete, 08-03 pending
+In progress — 08-01, 08-02, and 08-03 complete
 
 ## Milestones
 
@@ -78,7 +78,7 @@ None
 
 ## Session Continuity
 
-08-02-PLAN.md complete. Next: 08-03-PLAN.md — "Manage Lists" dialog (CRUD, remote URL, export, file import).
+08-03-PLAN.md complete. Phase 8 all plans done — Manage Lists dialog wired with CRUD, remote URL fetch, JSON export/import.
 
 ## Last Updated
-2026-05-21 (Phase 8 plan 2 complete — Import from List dialog wired into index.vue)
+2026-05-21 (Phase 8 plan 3 complete — Manage Lists dialog wired into index.vue)

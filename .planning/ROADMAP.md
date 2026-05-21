@@ -16,7 +16,7 @@
 - [ ] **Phase 5: Launch Assets** - Create demo video, finalize repo metadata, and build the hamtools.cc catalog landing page
 - [ ] **Phase 6: Ham Radio Communities** - Post to core ham radio forums and mailing lists where FTX-1 operators are active
 - [ ] **Phase 7: Extended Reach** - Reach Yaesu Facebook groups, developer communities (Show HN, dev.to), and eham.net
-- [ ] **Phase 8: Channel Lists** - User-managed channel lists with bundled presets, remote URL import, and JSON export/import; "Import from List" dialog mirroring RSGB import UX
+- [x] **Phase 8: Channel Lists** - User-managed channel lists with bundled presets, remote URL import, and JSON export/import; "Import from List" dialog mirroring RSGB import UX
 
 ---
 
@@ -154,7 +154,7 @@
 
 - [x] 08-01-PLAN.md — useLists.ts composable + bundled preset JSON files (LIST-01, LIST-02, LIST-03, LIST-04, LIST-05)
 - [x] 08-02-PLAN.md — "Import from List" dialog in index.vue (LIST-06, LIST-07)
-- [ ] 08-03-PLAN.md — "Manage Lists" dialog: CRUD, remote URL, export, file import (LIST-03, LIST-04, LIST-05)
+- [x] 08-03-PLAN.md — "Manage Lists" dialog: CRUD, remote URL, export, file import (LIST-03, LIST-04, LIST-05)
 
 ---
 
