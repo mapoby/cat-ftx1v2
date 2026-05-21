@@ -1135,6 +1135,83 @@
       </div>
     </Teleport>
 
+    <!-- ── Manage Lists dialog ── -->
+    <Teleport to="body">
+      <div v-if="manageListsDialog" class="rsgb-backdrop" @click.self="manageListsDialog = false">
+        <div class="rsgb-modal" role="dialog" aria-modal="true" aria-label="Manage Lists">
+
+          <div class="rsgb-header">
+            <span class="rsgb-title">Manage Channel Lists</span>
+            <button class="tone-modal-close" @click="manageListsDialog = false" aria-label="Close">✕</button>
+          </div>
+
+          <!-- Error rows -->
+          <div v-if="manageListsError" class="rsgb-error">{{ manageListsError }}</div>
+          <div v-if="listImportFileError" class="rsgb-error">{{ listImportFileError }}</div>
+
+          <!-- List table -->
+          <div class="rsgb-table-wrap">
+            <table class="rsgb-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Entries</th>
+                  <th>Source</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="list in allLists" :key="list.id">
+                  <td>
+                    <template v-if="renamingListId === list.id">
+                      <input v-model="renamingListName" class="slot-input" style="width:140px" @keydown.enter="confirmRename" @keydown.escape="cancelRename" />
+                      <button class="btn btn-sm btn-primary" @click="confirmRename">OK</button>
+                      <button class="btn btn-sm" @click="cancelRename">Cancel</button>
+                    </template>
+                    <template v-else>{{ list.name }}</template>
+                  </td>
+                  <td>{{ list.entries.length }}</td>
+                  <td>{{ list.source }}</td>
+                  <td>
+                    <button class="btn btn-sm" @click="exportList(list)" title="Download as JSON">Export</button>
+                    <template v-if="list.source !== 'bundled'">
+                      <button class="btn btn-sm" @click="startRename(list)" title="Rename list">Rename</button>
+                      <button class="btn btn-sm btn-danger" @click="deleteList(list.id)" title="Delete list">Delete</button>
+                    </template>
+                  </td>
+                </tr>
+                <tr v-if="!allLists.length">
+                  <td colspan="4" style="text-align:center;opacity:0.5">No lists yet</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Create new list row -->
+          <div class="rsgb-search-row" style="margin-top:12px">
+            <input v-model="newListName" class="rsgb-query-input" placeholder="New list name…" maxlength="64" @keydown.enter="doCreateList" />
+            <button class="btn btn-primary btn-sm" :disabled="!newListName.trim()" @click="doCreateList">+ Create List</button>
+          </div>
+
+          <!-- Add from URL row -->
+          <div class="rsgb-search-row">
+            <input v-model="addRemoteUrl" class="rsgb-query-input" placeholder="https://… (must allow CORS)" @keydown.enter="addListFromUrl" />
+            <button class="btn btn-primary btn-sm" :disabled="manageListsFetching || !addRemoteUrl.trim()" @click="addListFromUrl">
+              {{ manageListsFetching ? 'Fetching…' : 'Add from URL' }}
+            </button>
+          </div>
+
+          <!-- Import from file row -->
+          <div class="rsgb-import-row">
+            <button class="btn btn-sm" @click="triggerListImport">Import from .json file</button>
+            <div class="rsgb-import-spacer" />
+            <button class="btn btn-sm" @click="manageListsDialog = false">Close</button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
     <!-- ── Repeater info dialog ── -->
     <Teleport to="body">
       <div v-if="repInfoDialog" class="rsgb-backdrop" @click.self="repInfoDialog = false">
