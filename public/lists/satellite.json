@@ -1,0 +1,30 @@
+{
+  "id": "bundled-satellite-v1",
+  "name": "Satellite Frequencies",
+  "description": "Well-known satellite downlink and amateur satellite frequencies within FTX-1 range (100 kHz–470 MHz)",
+  "source": "bundled",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "entries": [
+    { "freq": 145800000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "ISS Voice" },
+    { "freq": 144490000, "txFreq": 145800000, "splitMem": true,  "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 1, "tag": "ISS V/U" },
+    { "freq": 145825000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "ISS APRS" },
+    { "freq": 437550000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "ISS Packet" },
+    { "freq": 137620000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "NOAA APT 1" },
+    { "freq": 137912500, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "NOAA APT 2" },
+    { "freq": 137100000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "NOAA 15" },
+    { "freq": 137900000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Meteor-M2" },
+    { "freq": 436795000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "SO-50 DN" },
+    { "freq": 145850000, "txFreq": 436795000, "splitMem": true,  "mode": "FM",  "sqlType": 2, "ctcssIdx": 32,  "dcsIdx": null, "shift": 1, "tag": "SO-50 UP" },
+    { "freq": 145960000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "AO-91 DN" },
+    { "freq": 435250000, "txFreq": 145960000, "splitMem": true,  "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 2, "tag": "AO-91 UP" },
+    { "freq": 145880000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "AO-92 DN" },
+    { "freq": 435350000, "txFreq": 145880000, "splitMem": true,  "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 2, "tag": "AO-92 UP" },
+    { "freq": 145900000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "PO-101 DN" },
+    { "freq": 437500000, "txFreq": 145900000, "splitMem": true,  "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 2, "tag": "PO-101 UP" },
+    { "freq": 145950000, "txFreq": null,      "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "AO-07 B DN" },
+    { "freq": 29450000,  "txFreq": null,      "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "AO-07 A DN" },
+    { "freq": 145000000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "SAT Beacon" },
+    { "freq": 432000000, "txFreq": null,      "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "70cm Beacon" },
+    { "freq": 145825000, "txFreq": null,      "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "SAT FM Call" }
+  ]
+}

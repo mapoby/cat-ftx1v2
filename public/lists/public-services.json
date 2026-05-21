@@ -1,0 +1,30 @@
+{
+  "id": "bundled-public-services-v1",
+  "name": "Public Services (UK)",
+  "description": "UK emergency services, Airwave TETRA band, voluntary emergency comms, and public service monitoring frequencies",
+  "source": "bundled",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "entries": [
+    { "freq": 156800000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Ch16 Distr" },
+    { "freq": 156000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Ch01 CG" },
+    { "freq": 156375000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Ch67 CG UK" },
+    { "freq": 156300000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Ch06 SAR" },
+    { "freq": 51520000,  "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "MountainRes" },
+    { "freq": 467662500, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "MR UHF" },
+    { "freq": 145300000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "RAYNET FM" },
+    { "freq": 144300000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "RAYNET SSB" },
+    { "freq": 433500000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "RAYNET 70cm" },
+    { "freq": 380000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Base" },
+    { "freq": 380137500, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Ch1" },
+    { "freq": 380162500, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Ch2" },
+    { "freq": 380187500, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Ch3" },
+    { "freq": 385000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Mid" },
+    { "freq": 390000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA 390" },
+    { "freq": 395000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA 395" },
+    { "freq": 399937500, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "TETRA Top" },
+    { "freq": 168000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Old Police" },
+    { "freq": 171000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Old Fire" },
+    { "freq": 450550000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Old Amb UHF" },
+    { "freq": 460000000, "txFreq": null, "splitMem": false, "mode": "FM", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "Utility UHF" }
+  ]
+}
