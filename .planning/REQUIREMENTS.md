@@ -7,19 +7,19 @@
 
 ### Testing
 
-- [ ] **TEST-01**: CAT protocol parsing logic is extracted into a pure function module (`catParser.ts`) with no Vue or Web Serial dependencies
+- [x] **TEST-01**: CAT protocol parsing logic is extracted into a pure function module (`catParser.ts`) with no Vue or Web Serial dependencies
 - [x] **TEST-02**: `parseResponse()` is unit tested with Vitest covering all 30+ CAT opcodes including edge cases
-- [ ] **TEST-03**: `defaultState()` is exported from `useSerial.ts` so tests can construct a valid base state without duplication
+- [x] **TEST-03**: `defaultState()` is exported from `useSerial.ts` so tests can construct a valid base state without duplication
 - [x] **TEST-04**: Vitest runs in CI (GitHub Actions) before the Docker build step and fails the build on test failure
 - [x] **TEST-05**: Test coverage report is generated and available in CI artifacts
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: `scanMemoryChannels()` saves VFO frequency before scan and restores it in a `try/finally` block; TX controls are disabled during scan
-- [ ] **BUG-02**: `readMemoryChannel()` reads CTCSS/DCS tone directly from the `_sendAndWait()` return value, not from global `state.value.mainCtcssTone`
-- [ ] **BUG-03**: `toggleRfSql()` uses a dedicated `rfSqlBusy` flag and removes the incorrect `preAmpHf === null` guard
-- [ ] **BUG-04**: Memory scan disables AI mode (`AI0`) before bulk reads and re-enables it (`AI1`) after, preventing unsolicited frames from resolving solicited queue entries with stale data
-- [ ] **BUG-05**: Switching to the Channel List tab sends `AI0` to disable Auto Information mode; switching away sends `AI1` to re-enable it
+- [x] **BUG-01**: `scanMemoryChannels()` saves VFO frequency before scan and restores it in a `try/finally` block; TX controls are disabled during scan
+- [x] **BUG-02**: `readMemoryChannel()` reads CTCSS/DCS tone directly from the `_sendAndWait()` return value, not from global `state.value.mainCtcssTone`
+- [x] **BUG-03**: `toggleRfSql()` uses a dedicated `rfSqlBusy` flag and removes the incorrect `preAmpHf === null` guard
+- [x] **BUG-04**: Memory scan disables AI mode (`AI0`) before bulk reads and re-enables it (`AI1`) after, preventing unsolicited frames from resolving solicited queue entries with stale data
+- [x] **BUG-05**: Switching to the Channel List tab sends `AI0` to disable Auto Information mode; switching away sends `AI1` to re-enable it
 
 ### Browser Compatibility
 
@@ -79,16 +79,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
-| TEST-03 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Complete |
 | TEST-05 | Phase 1 | Complete |
-| BUG-01 | Phase 1 | Pending |
-| BUG-02 | Phase 1 | Pending |
-| BUG-03 | Phase 1 | Pending |
-| BUG-04 | Phase 1 | Pending |
-| BUG-05 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
+| BUG-02 | Phase 1 | Complete |
+| BUG-03 | Phase 1 | Complete |
+| BUG-04 | Phase 1 | Complete |
+| BUG-05 | Phase 1 | Complete |
 | COMPAT-01 | Phase 2 | Complete |
 | COMPAT-02 | Phase 2 | Complete |
 | ERR-01 | Phase 2 | Complete |
