@@ -1,0 +1,19 @@
+{
+  "id": "bundled-uk-repeaters-v1",
+  "name": "UK FM Repeater Sample",
+  "description": "A small curated sample of UK VHF/UHF FM repeaters — use RSGB import for the full database",
+  "source": "bundled",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "entries": [
+    { "freq": 145737500, "txFreq": 146337500, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3VHF" },
+    { "freq": 145600000, "txFreq": 146200000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3RA" },
+    { "freq": 145725000, "txFreq": 146325000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3MH" },
+    { "freq": 145650000, "txFreq": 146250000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3BC" },
+    { "freq": 433000000, "txFreq": 431400000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 2, "tag": "GB3UHF" },
+    { "freq": 433075000, "txFreq": 431475000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 2, "tag": "GB3YC" },
+    { "freq": 433100000, "txFreq": 431500000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 2, "tag": "GB3ZZ" },
+    { "freq": 145712500, "txFreq": 146312500, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3EF" },
+    { "freq": 145762500, "txFreq": 146362500, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3WW" },
+    { "freq": 145775000, "txFreq": 146375000, "splitMem": true, "mode": "FM", "sqlType": 2, "ctcssIdx": 1, "dcsIdx": null, "shift": 1, "tag": "GB3KK" }
+  ]
+}

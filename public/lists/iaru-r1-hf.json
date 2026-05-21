@@ -1,0 +1,16 @@
+{
+  "id": "bundled-iaru-r1-hf-v1",
+  "name": "IARU R1 HF Band Segments",
+  "description": "IARU Region 1 HF calling and activity frequencies",
+  "source": "bundled",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "entries": [
+    { "freq": 3573000,  "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "80m FT8" },
+    { "freq": 7074000,  "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "40m FT8" },
+    { "freq": 14074000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "20m FT8" },
+    { "freq": 14225000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "20m SSB" },
+    { "freq": 21074000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "15m FT8" },
+    { "freq": 28074000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "10m FT8" },
+    { "freq": 7200000,  "txFreq": null, "splitMem": false, "mode": "LSB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "40m SSB" }
+  ]
+}

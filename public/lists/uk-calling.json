@@ -1,0 +1,17 @@
+{
+  "id": "bundled-uk-calling-v1",
+  "name": "UK Calling Frequencies",
+  "description": "National calling frequencies for UK amateur radio operators",
+  "source": "bundled",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "entries": [
+    { "freq": 145500000, "txFreq": null, "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "2m CALL" },
+    { "freq": 433500000, "txFreq": null, "splitMem": false, "mode": "FM",  "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "70cm CALL" },
+    { "freq": 14300000,  "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "20m CALL" },
+    { "freq": 21360000,  "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "15m CALL" },
+    { "freq": 7090000,   "txFreq": null, "splitMem": false, "mode": "LSB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "40m CALL" },
+    { "freq": 3760000,   "txFreq": null, "splitMem": false, "mode": "LSB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "80m CALL" },
+    { "freq": 50150000,  "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "6m CALL" },
+    { "freq": 144300000, "txFreq": null, "splitMem": false, "mode": "USB", "sqlType": 0, "ctcssIdx": null, "dcsIdx": null, "shift": 0, "tag": "2m SSB" }
+  ]
+}
