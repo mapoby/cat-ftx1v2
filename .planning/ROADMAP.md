@@ -152,7 +152,7 @@
 
 **Plans**: 3 plans
 
-- [ ] 08-01-PLAN.md — useLists.ts composable + bundled preset JSON files (LIST-01, LIST-02, LIST-03, LIST-04, LIST-05)
+- [x] 08-01-PLAN.md — useLists.ts composable + bundled preset JSON files (LIST-01, LIST-02, LIST-03, LIST-04, LIST-05)
 - [ ] 08-02-PLAN.md — "Import from List" dialog in index.vue (LIST-06, LIST-07)
 - [ ] 08-03-PLAN.md — "Manage Lists" dialog: CRUD, remote URL, export, file import (LIST-03, LIST-04, LIST-05)
 
@@ -169,7 +169,7 @@
 | 5. Launch Assets | 0/4 | Not started | — |
 | 6. Ham Radio Communities | 0/2 | Not started | — |
 | 7. Extended Reach | 0/3 | Not started | — |
-| 8. Channel Lists | 0/3 | Not started | — |
+| 8. Channel Lists | 1/3 | In progress | — |
 
 ---
 *Roadmap created: 2026-05-08*

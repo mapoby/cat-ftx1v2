@@ -7,10 +7,14 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 **Current focus:** Phase 3
 
 ## Current Phase
-Phase 5 — Launch Assets
+Phase 8 — Channel Lists
+
+## Current Plan
+
+Plan 1 — Complete (08-01-PLAN.md)
 
 ## Status
-Not started — milestone v2 Community Launch planned, ready to begin Phase 5
+In progress — 08-01 complete, 08-02 and 08-03 pending
 
 ## Milestones
 
@@ -58,6 +62,10 @@ Not started — milestone v2 Community Launch planned, ready to begin Phase 5
 - Delete Selected button opens disclosure modal; confirm handler sets dialog false before async deleteSelectedFromRadio (DATA-03)
 - validateCsvRow placed immediately before onImportCsv — keeps validation and usage co-located (DATA-01)
 - CSV modal uses Vue 3 ref auto-unwrap in template (no .value in @click handlers) (DATA-01)
+- useLists uses module-level singleton state (mirrors useSerial.ts pattern)
+- validateChannelList is permissive on optional fields, strict on freq range and required string fields
+- vitest.config.mts extended to include composables/**/*.test.ts; jsdom devDep added for @vitest-environment jsdom
+- FT8 entries in iaru-r1-hf.json use mode=USB with descriptive tag (FT8 is not a native FTX-1 mode label)
 
 ### Blockers
 None
@@ -67,8 +75,7 @@ None
 
 ## Session Continuity
 
-Milestone complete — v1 Production Hardening delivered.
-Next action: /gsd-complete-milestone
+08-01-PLAN.md complete. Next: 08-02-PLAN.md — "Import from List" dialog in index.vue.
 
 ## Last Updated
-2026-05-09 (Phase 4 complete — milestone v1 Production Hardening finished)
+2026-05-21 (Phase 8 plan 1 complete — useLists composable + bundled preset JSON files)

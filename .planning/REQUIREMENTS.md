@@ -63,6 +63,16 @@
 - **DEBT-03**: `CommandResult` re-declaration in `index.vue` removed; use the exported type from `useSerial.ts`
 - **DEBT-04**: Timing magic numbers (`40`, `60`, `150`, `1500` ms) extracted to named constants with comments explaining the FTX-1 spec requirement
 
+### Channel Lists
+
+- [x] **LIST-01**: `ChannelList` and `ListEntry` TypeScript interfaces defined in `composables/useLists.ts`; `ListEntry` maps 1-to-1 to `MemoryWriteConfig` fields (freq, txFreq, splitMem, mode, sqlType, ctcssIdx, dcsIdx, shift, tag)
+- [x] **LIST-02**: Bundled preset lists shipped as static JSON files in `public/lists/`; `useLists` loads them at runtime without a build step
+- [x] **LIST-03**: User-created lists persisted in localStorage; full CRUD (create, rename, delete list; add, edit, remove entries)
+- [x] **LIST-04**: Remote URL import — user provides a URL; app fetches and validates a JSON payload matching the `ChannelList` schema before adding to the list table
+- [x] **LIST-05**: JSON export/import — any list can be downloaded as a `.json` file; a `.json` file can be imported to create a new user list
+- **LIST-06**: "Import from List" dialog in the channel list tab — table of all available lists (bundled + user-created), select a list to browse its entries, multi-select entries, import selected entries into the channel list (same behaviour as RSGB import)
+- **LIST-07**: Import from List dialog UX mirrors the RSGB import dialog: same open/close pattern, same entry table layout, same "import selected" action and success/error feedback
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -102,12 +112,20 @@
 | INFRA-02 | Phase 4 | Pending |
 | INFRA-03 | Phase 4 | Pending |
 | INFRA-04 | Phase 4 | Pending |
+| LIST-01 | Phase 8 | Complete |
+| LIST-02 | Phase 8 | Complete |
+| LIST-03 | Phase 8 | Complete |
+| LIST-04 | Phase 8 | Complete |
+| LIST-05 | Phase 8 | Complete |
+| LIST-06 | Phase 8 | Pending |
+| LIST-07 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 23
+- v2 requirements (LIST): 7 total
+- Mapped to phases: 30
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-08*
-*Last updated: 2026-05-08 after roadmap creation*
+*Last updated: 2026-05-21 — LIST-01 through LIST-05 complete (08-01)*
