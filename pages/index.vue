@@ -1047,6 +1047,92 @@
       </div>
     </Teleport>
 
+    <!-- ── Import from List dialog ── -->
+    <Teleport to="body">
+      <div v-if="listImportDialog" class="rsgb-backdrop" @click.self="listImportDialog = false">
+        <div class="rsgb-modal" role="dialog" aria-modal="true" aria-label="Import from List">
+
+          <div class="rsgb-header">
+            <span class="rsgb-title">Import from Channel List</span>
+            <button class="tone-modal-close" @click="listImportDialog = false" aria-label="Close">✕</button>
+          </div>
+
+          <!-- List selector row -->
+          <div class="rsgb-search-row">
+            <select v-model="listImportSelectedList" class="sel rsgb-type-sel" style="min-width:200px">
+              <option :value="null">Select a list…</option>
+              <option v-for="list in allLists" :key="list.id" :value="list">
+                {{ list.name }} ({{ list.entries.length }} entries)
+              </option>
+            </select>
+          </div>
+
+          <!-- Summary row (shown when a list is selected) -->
+          <div v-if="listImportSelectedList" class="rsgb-summary">
+            {{ listImportSelectedList.entries.length }} entries —
+            <strong>{{ listImportSelectedCount }} selected</strong>
+          </div>
+          <div v-else-if="!allLists.length" class="rsgb-no-match">No lists available.</div>
+
+          <!-- Entry table -->
+          <div v-if="listImportSelectedList?.entries.length" class="rsgb-table-wrap">
+            <table class="rsgb-table">
+              <thead>
+                <tr>
+                  <th class="th-rsgb-chk">
+                    <input type="checkbox" class="cell-checkbox"
+                      :checked="listImportAllSelected"
+                      @change="listToggleAll(($event.target as HTMLInputElement).checked)"
+                    />
+                  </th>
+                  <th>Freq (MHz)</th>
+                  <th>TX Freq</th>
+                  <th>Mode</th>
+                  <th>SQL</th>
+                  <th>CTCSS</th>
+                  <th>Tag</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, idx) in listImportSelectedList.entries" :key="idx">
+                  <td class="td-rsgb-chk">
+                    <input type="checkbox" class="cell-checkbox"
+                      :checked="listImportSelected.has(idx)"
+                      @change="listToggleEntry(idx, ($event.target as HTMLInputElement).checked)"
+                    />
+                  </td>
+                  <td>{{ (entry.freq / 1_000_000).toFixed(4) }}</td>
+                  <td>{{ entry.txFreq != null ? (entry.txFreq / 1_000_000).toFixed(4) : '—' }}</td>
+                  <td>{{ entry.mode ?? '—' }}</td>
+                  <td>{{ entry.sqlType != null ? entry.sqlType : '—' }}</td>
+                  <td>{{ entry.ctcssIdx != null ? CTCSS_TONES[entry.ctcssIdx]?.toFixed(1) ?? '—' : '—' }}</td>
+                  <td>{{ entry.tag ?? '' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Import controls row (shown when entries exist) -->
+          <div v-if="listImportSelectedList?.entries.length" class="rsgb-import-row">
+            <label class="rsgb-import-label">Add from slot:</label>
+            <input type="number" v-model.number="listImportAddFromSlot" min="1" max="999" class="slot-input" />
+            <label class="rsgb-import-check">
+              <input type="checkbox" v-model="listImportOverwrite" />
+              Overwrite existing
+            </label>
+            <div class="rsgb-import-spacer" />
+            <button class="btn btn-sm" @click="listImportDialog = false">Cancel</button>
+            <button class="btn btn-primary btn-sm"
+              :disabled="!listImportSelectedCount"
+              @click="importFromList">
+              Add {{ listImportSelectedCount }} channels
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
     <!-- ── Repeater info dialog ── -->
     <Teleport to="body">
       <div v-if="repInfoDialog" class="rsgb-backdrop" @click.self="repInfoDialog = false">
@@ -2871,6 +2957,73 @@ function importRsgbChannels() {
   }
   rsgbDialog.value = false
 }
+
+function listToggleAll(checked: boolean) {
+  if (!listImportSelectedList.value) return
+  if (checked) {
+    listImportSelectedList.value.entries.forEach((_, i) => listImportSelected.value.add(i))
+  } else {
+    listImportSelected.value.clear()
+  }
+  listImportSelected.value = new Set(listImportSelected.value)
+}
+
+function listToggleEntry(idx: number, checked: boolean) {
+  const s = new Set(listImportSelected.value)
+  checked ? s.add(idx) : s.delete(idx)
+  listImportSelected.value = s
+}
+
+function importFromList() {
+  if (!listImportSelectedList.value) return
+  const entries = listImportSelectedList.value.entries
+  const selectedEntries = entries.filter((_, i) => listImportSelected.value.has(i))
+  const existingSlots = new Set(channelListRows.value.map(r => r.slot))
+  let nextSlot = listImportAddFromSlot.value
+  const newRows: EditableChannel[] = []
+
+  for (const entry of selectedEntries) {
+    if (!listImportOverwrite.value) {
+      while (existingSlots.has(nextSlot) && nextSlot <= 999) nextSlot++
+    }
+    if (nextSlot > 999) break
+
+    newRows.push({
+      slot:       nextSlot,
+      freq:       entry.freq,
+      txFreq:     entry.txFreq,
+      splitMem:   entry.splitMem,
+      mode:       entry.mode ?? 'FM',
+      sqlType:    entry.sqlType ?? 0,
+      ctcssIdx:   entry.ctcssIdx,
+      dcsIdx:     entry.dcsIdx,
+      clarDir:    '+',
+      clarOffset: 0,
+      rxClar:     false,
+      txClar:     false,
+      shift:      entry.shift ?? 0,
+      tag:        (entry.tag ?? '').substring(0, 12),
+      dirty:      true,
+    })
+    existingSlots.add(nextSlot)
+    nextSlot++
+  }
+
+  if (listImportOverwrite.value) {
+    const rowMap = new Map(channelListRows.value.map(r => [r.slot, r]))
+    for (const nr of newRows) rowMap.set(nr.slot, nr)
+    channelListRows.value = Array.from(rowMap.values()).sort((a, b) => a.slot - b.slot)
+  } else {
+    channelListRows.value = [...channelListRows.value, ...newRows].sort((a, b) => a.slot - b.slot)
+  }
+
+  listImportSelected.value = new Set()
+  listImportDialog.value = false
+}
+
+watch(listImportSelectedList, () => {
+  listImportSelected.value = new Set()
+})
 
 async function scanRadioMemory() {
   if (radioMemScanning.value) return
